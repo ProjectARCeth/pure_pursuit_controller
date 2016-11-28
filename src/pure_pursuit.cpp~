@@ -18,8 +18,8 @@ void safe_the_state(const arc_msgs::State subscribed)
 status=subscribed;
 x_curr[0]=subscribed.pose.pose.position.x;
 x_curr[1]=subscribed.pose.pose.position.y;
-v_curr[0]=subscribed.pose_diff.twist.linear.x;
-v_curr[1]=subscribed.pose_diff.twist.linear.y;
+v_curr[0]=subscribed.pose_diff.twist.pose.linear.x;
+v_curr[1]=subscribed.pose_diff.twist.pose.linear.y;
 
 }
 void safe_the_path(const nav_msgs::Path subscribed)
