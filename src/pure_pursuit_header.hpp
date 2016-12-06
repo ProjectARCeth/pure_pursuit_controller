@@ -33,6 +33,9 @@ private :
 	arc_msgs::State state_;
 	ros::NodeHandle* n_;
 	bool manual_u_;
+	ros::Subscriber sub_state_;
+	ros::Subscriber sub_path_;
+	ros::Publisher pub_stellgroessen_;
 protected:
 
 };
