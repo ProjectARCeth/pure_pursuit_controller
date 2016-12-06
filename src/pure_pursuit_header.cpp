@@ -29,10 +29,10 @@ void PurePursuit::sts(const arc_msgs::State::ConstPtr& subscribed)
 
 float* PurePursuit::pathInfo(float where)			//hier interpoliert und info at "where" (derivative ecc) in ARRAY zurück
 	{							//provisorisch, bevor mit Pfadpunkten gearbeiteet wird
-	float R=10;						//array:{x_coordinate,y_coordinate,..}
+	float R=30;						//array:{x_coordinate,y_coordinate,..}
 	std::vector<float> x_pfad(2);
-	x_pfad[0]=R*cos(where);
-	x_pfad[1]=R*sin(where);
+	x_pfad[0] = 0;					//=R*cos(where)-R;
+	x_pfad[1] = where;					//=R*sin(where);
 	float* pointer=&x_pfad[0] ;
 	return pointer;
 	}
@@ -63,8 +63,8 @@ void PurePursuit::calculateU()					//Schritte um u zu berechnen (Reglerspezyfisc
 	float j=findReference(l);
 	float theta1=atan2(pathInfo(j)[1]-(state_.pose.pose.position.x),pathInfo(j)[0]-(state_.pose.pose.position.y));
 	//letzte zwei Zeilen oder
-//float j=projectOnPath()[2];
-//float theta1=atan2(path_.poses[int(j+l)].pose.position.x-(state_.pose.pose.position.x),path_.poses[int(j+l)].pose.position.y-	(state_.pose.pose.position.y));
+  //float j=projectOnPath()[2];
+  //float theta1=atan2(path_.poses[int(j+l)].pose.position.x-(state_.pose.pose.position.x),path_.poses[int(j+l)].pose.position.y-	(state_.pose.pose.position.y));
 
 	float ox=state_.pose.pose.orientation.x;		//Transformation von Quaternion zu Euler
 	float oy=state_.pose.pose.orientation.y;
@@ -108,6 +108,8 @@ void PurePursuit::publishU()
 	{
 	pub_stellgroessen_ = n_->advertise<ackermann_msgs::AckermannDrive>("stellgroessen", 1000);
 	pub_stellgroessen_.publish(u_);
+	std::cout<<state_.current_arrayposition<< std::endl;
+
 	}
 
 float* PurePursuit::projectOnPath()					//gibt i.a. nicht Punkt
