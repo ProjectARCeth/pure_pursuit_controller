@@ -37,6 +37,7 @@ private :
 	ros::Subscriber sub_state_;
 	ros::Subscriber sub_path_;
 	ros::Publisher pub_stellgroessen_;
+	float global;
 protected:
 
 };
