@@ -5,6 +5,7 @@ PurePursuit::PurePursuit(float k1,ros::NodeHandle* n)		//Konstruktor mit paramet
 	k_=k1;
 	manual_u_=false;
 	n_=n;
+	global=0;
 	state_.current_arrayposition=0;
 	sub_path_ = n_->subscribe("path", 5,&PurePursuit::safeThePath,this);
 	sub_state_ = n_->subscribe("state", 10, &PurePursuit::sts,this);
@@ -31,10 +32,9 @@ void PurePursuit::sts(const arc_msgs::State::ConstPtr& subscribed)
 float* PurePursuit::pathInfo(float where)			//hier interpoliert und info at "where" (derivative ecc) in ARRAY zurück
 	{							//provisorisch, bevor mit Pfadpunkten gearbeiteet wird
 	float R=30;						//array:{x_coordinate,y_coordinate,..}
-	std::vector<float> x_pfad(2);
-	x_pfad[0] =where;
-	x_pfad[1] =where*where;
-	float* pointer= &x_pfad[0] ;
+	float x_pfad[2]={0,(where)};			
+	float *pointer;
+	pointer= x_pfad ;
 	return pointer;
 	}
 
@@ -80,7 +80,7 @@ void PurePursuit::calculateU()					//Schritte um u zu berechnen (Reglerspezyfisc
 	float ow=state_.pose.pose.orientation.w;
 	const Eigen::Vector4d quat(ox, oy, oz, ow);
 	geometry_msgs::Vector3 eul;
-	eul=transformEulerQuaternion(quat);
+	eul=arc_tools::transformEulerQuaternion(quat);
 	float theta2=-eul.z;
 
 	float alpha=theta1-theta2;
@@ -91,18 +91,18 @@ void PurePursuit::calculateU()					//Schritte um u zu berechnen (Reglerspezyfisc
 	}
 	}
 
-float PurePursuit::findReference(float l)
+float PurePursuit::findReference(float l)		//erste referenz wird zw pathInfo(0) und pathInfo(200) gesucht
 	{
 	float e=100;
-	int j;
-	for(float i=global; i<(global+5); i=i+0.1)	//je nach Pfad grenzen und schritte
+	float j;
+	for(float i=global; i<(global+200); i=i+0.1)	//je nach Pfad grenzen und schritte
 												//einstellen
 		{
 		float x_pfad=pathInfo(i)[0];
 		float y_pfad=pathInfo(i)[1];
 		float x_now=state_.pose.pose.position.x;
 		float y_now=state_.pose.pose.position.y;
-		float d=abs(l-sqrt(pow((x_now-x_pfad),2)+pow((y_now-y_pfad),2)));
+		float d=fabs(l-sqrt(pow((x_now-x_pfad),2)+pow((y_now-y_pfad),2)));
 		if(d<e)
 			{
 			e=d;
@@ -131,7 +131,7 @@ float* PurePursuit::projectOnPath()					//gibt i.a. nicht Punkt
 	float ow=state_.pose.pose.orientation.w;
 	const Eigen::Vector4d quat(ox, oy, oz, ow);
 	geometry_msgs::Vector3 eul;
-	eul=transformEulerQuaternion(quat);
+	eul=arc_tools::transformEulerQuaternion(quat);
 	float theta=eul.z;
 
 	float x_now=state_.pose.pose.position.x;
@@ -157,4 +157,15 @@ float* PurePursuit::projectOnPath()					//gibt i.a. nicht Punkt
 
 	if(&x_projected_p==NULL){std::cout<<"Fehler, senkrecht zu Fahrzeug liegt kein Pfad";}
 	return x_projected_p;						//Sollte eine fehlermeldung geben
+	}
+
+void PurePursuit::setState(float x, float y)
+	{
+	state_.pose.pose.position.x=x;
+	state_.pose.pose.position.y=y;
+	}
+
+arc_msgs::State PurePursuit::getState() 
+	{
+	return state_;
 	}

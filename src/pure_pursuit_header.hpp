@@ -27,6 +27,8 @@ public :
 	void safeThePath(const nav_msgs::Path::ConstPtr& subscribed);
 	void sts(const arc_msgs::State::ConstPtr& subscribed);
 	float* projectOnPath();		//Noch nicht gebraucht, gibt senkrechte Projection auf pfad, um von dort LAD zu berechnen
+	void setState(float x, float y);
+	arc_msgs::State getState();
 private :
 	float k_;
 	ackermann_msgs::AckermannDrive u_;
