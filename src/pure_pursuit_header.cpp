@@ -15,8 +15,8 @@ PurePursuit::PurePursuit(float k1,ros::NodeHandle* n)		//Konstruktor mit paramet
 void PurePursuit::safeThePath(const nav_msgs::Path::ConstPtr& subscribed)
 	{
 	path_=*subscribed;
-	//this->calculateU();
-	//this->publishU();
+	this->calculateU();
+	this->publishU();
 
 	}
 
@@ -31,8 +31,8 @@ void PurePursuit::sts(const arc_msgs::State::ConstPtr& subscribed)
 
 float* PurePursuit::pathInfo(float where)			//hier interpoliert und info at "where" (derivative ecc) in ARRAY zurück
 	{							//provisorisch, bevor mit Pfadpunkten gearbeiteet wird
-	float R=30;						//array:{x_coordinate,y_coordinate,..}
-	float x_pfad[2]={0,(where)};			
+	float R=20;						//array:{x_coordinate,y_coordinate,..}
+	float x_pfad[2]={where,(R*sin(where/15))};
 	float *pointer;
 	pointer= x_pfad ;
 	return pointer;
@@ -59,7 +59,7 @@ void PurePursuit::calculateU()					//Schritte um u zu berechnen (Reglerspezyfisc
 	float v=10.0;
 	float L=3.0;
 	float v_abs=sqrt(pow(state_.pose_diff.twist.linear.x,2)+pow(state_.pose_diff.twist.linear.x,2));
-	float l=10;
+	float l=5;
 	float j=findReference(l);
 	float theta1=atan2(pathInfo(j)[1]-(state_.pose.pose.position.y),pathInfo(j)[0]-(state_.pose.pose.position.x));
 	//letzte zwei Zeilen oder
@@ -80,7 +80,7 @@ void PurePursuit::calculateU()					//Schritte um u zu berechnen (Reglerspezyfisc
 	float ow=state_.pose.pose.orientation.w;
 	const Eigen::Vector4d quat(ox, oy, oz, ow);
 	geometry_msgs::Vector3 eul;
-	eul=arc_tools::transformEulerQuaternion(quat);
+	eul=arc_tools::transformEulerQuaternionMsg(quat);
 	float theta2=-eul.z;
 
 	float alpha=theta1-theta2;
@@ -131,7 +131,7 @@ float* PurePursuit::projectOnPath()					//gibt i.a. nicht Punkt
 	float ow=state_.pose.pose.orientation.w;
 	const Eigen::Vector4d quat(ox, oy, oz, ow);
 	geometry_msgs::Vector3 eul;
-	eul=arc_tools::transformEulerQuaternion(quat);
+	eul=arc_tools::transformEulerQuaternionMsg(quat);
 	float theta=eul.z;
 
 	float x_now=state_.pose.pose.position.x;
@@ -165,7 +165,7 @@ void PurePursuit::setState(float x, float y)
 	state_.pose.pose.position.y=y;
 	}
 
-arc_msgs::State PurePursuit::getState() 
+arc_msgs::State PurePursuit::getState()
 	{
 	return state_;
 	}
