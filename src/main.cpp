@@ -16,8 +16,10 @@ int main(int argc, char **argv)
 //	float a=atan2(5,-2);
 
 	//std::cout<<a<<std::endl;
-	ros::spin();
+	ros::spin();		//hier gut verstehen wie spin..
 	return 0;
 	}
 
 //spin spinonce ? wie wäre ein bsp?
+
+

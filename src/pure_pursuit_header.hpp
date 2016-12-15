@@ -9,6 +9,8 @@
 #include"arc_tools/coordinate_transform.hpp"
 #include"geometry_msgs/Vector3.h"
 #include <iostream>
+#include <fstream>
+#include <sstream>
 
 //void safeThePath(const nav_msgs::Path subscribed);
 class PurePursuit{
@@ -16,7 +18,7 @@ class PurePursuit{
 
 public :
 	PurePursuit();
-	PurePursuit(float k1,ros::NodeHandle* n);			//Konstruktor mit parameter k einstellbar
+	PurePursuit(float k1,ros::NodeHandle* n);			//Konstruktor mit parameter k einstellbar	
 	float* pathInfo(float where);		//hier interpoliert und info at "where" (derivative ecc) in ARRAY zurück
 	ackermann_msgs::AckermannDrive getU();	//die im private gespeicherten aktuellen Stellgrössen u werden zurückgegeben
 	void safeTheState();			//gibt State zurück
@@ -24,11 +26,13 @@ public :
 	void calculateU();				//Schritte um u zu berechnen (Reglerspezyfisch)
 	float findReference(float l);	//findet "referenz" (reglerspezyfisch) hier parameter auf kurve
 	void publishU();
-	void safeThePath(const nav_msgs::Path::ConstPtr& subscribed);
+	//void safeThePath(const nav_msgs::Path::ConstPtr& subscribed);
 	void sts(const arc_msgs::State::ConstPtr& subscribed);
 	float* projectOnPath();		//Noch nicht gebraucht, gibt senkrechte Projection auf pfad, um von dort LAD zu berechnen
 	void setState(float x, float y);
 	arc_msgs::State getState();
+	void readPathFromTxt(std::string inFileName);
+	~PurePursuit();
 private :
 	float k_;
 	ackermann_msgs::AckermannDrive u_;
@@ -39,7 +43,7 @@ private :
 	ros::Subscriber sub_state_;
 	ros::Subscriber sub_path_;
 	ros::Publisher pub_stellgroessen_;
-	float global;
+	float global; 
 protected:
 
 };

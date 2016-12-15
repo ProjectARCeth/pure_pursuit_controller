@@ -6,26 +6,31 @@ PurePursuit::PurePursuit(float k1,ros::NodeHandle* n)		//Konstruktor mit paramet
 	manual_u_=false;
 	n_=n;
 	global=0;
+	std::cout<<"konstruktor"<<std::endl;
+	readPathFromTxt("pathRov_openLoop.txt");
 	state_.current_arrayposition=0;
-	sub_path_ = n_->subscribe("path", 5,&PurePursuit::safeThePath,this);
+	//sub_path_ = n_->subscribe("path", 5,&PurePursuit::safeThePath,this);
 	sub_state_ = n_->subscribe("state", 10, &PurePursuit::sts,this);
 	pub_stellgroessen_ = n_->advertise<ackermann_msgs::AckermannDrive>("stellgroessen", 10);
+
 	}
 
-void PurePursuit::safeThePath(const nav_msgs::Path::ConstPtr& subscribed)
+/*void PurePursuit::safeThePath(const nav_msgs::Path::ConstPtr& subscribed)
 	{
 	path_=*subscribed;
 	this->calculateU();
 	this->publishU();
+	std::cout<<"new path"<<std::endl;
 
-	}
+	}*/
 
 void PurePursuit::sts(const arc_msgs::State::ConstPtr& subscribed)
 	{
+	
 	state_=*subscribed;
 	this->calculateU();
 	this->publishU();
-	}
+}
 
 
 
@@ -59,21 +64,30 @@ void PurePursuit::calculateU()					//Schritte um u zu berechnen (Reglerspezyfisc
 	float v=10.0;
 	float L=3.0;
 	float v_abs=sqrt(pow(state_.pose_diff.twist.linear.x,2)+pow(state_.pose_diff.twist.linear.x,2));
-	float l=5;
-	float j=findReference(l);
-	float theta1=atan2(pathInfo(j)[1]-(state_.pose.pose.position.y),pathInfo(j)[0]-(state_.pose.pose.position.x));
+	float lad=5;
+
+	//float j=findReference(lad);
+	//float theta1=atan2(pathInfo(j)[1]-(state_.pose.pose.position.y),pathInfo(j)[0]-(state_.pose.pose.position.x));
 	//letzte zwei Zeilen oder
-  //float j=projectOnPath()[2];
-  //float theta1;
-	//if(int(j+l)<(sizeof(path_.poses)/sizeof(path_.poses[0]))-3)
-	//{
-	//	theta1=1;
-	//} //atan2(path_.poses[int(j+l)].pose.position.x-(state_.pose.pose.position.x),path_.poses[int(j+l)].pose.position.y-	(state_.pose.pose.position.y));}
-	//else
-	//{
-	//  int ende=(sizeof(path_.poses)/sizeof(path_.poses[0]));
-	//  theta1=atan2(path_.poses[ende].pose.position.x-(state_.pose.pose.position.x),path_.poses[ende].pose.position.y-	(state_.pose.pose.position.y));
-	//}
+  	float j=projectOnPath()[2];
+  	float theta1;
+	//länge skalieren
+	float l=0;
+	int i=j;
+	while(l<lad)	
+		{
+		l+=sqrt(pow(path_.poses[int(j+1)].pose.position.x-path_.poses[int(j)].pose.position.x,2)+pow(path_.poses[int(j+1)].pose.position.y-path_.poses[int(j)].pose.position.y,2));
+		i++;
+		}
+	std::cout<<i<<" "<<l<<std::endl;
+	if(i<(sizeof(path_.poses)/sizeof(path_.poses[0]))-1)
+	{
+		theta1=atan2(path_.poses[i].pose.position.x-(state_.pose.pose.position.x),path_.poses[i].pose.position.y-	(state_.pose.pose.position.y));}
+	else
+	{
+	  int ende=(sizeof(path_.poses)/sizeof(path_.poses[0]));
+	  theta1=atan2(path_.poses[ende].pose.position.x-(state_.pose.pose.position.x),path_.poses[ende].pose.position.y-	(state_.pose.pose.position.y));
+	}
 	float ox=state_.pose.pose.orientation.x;		//Transformation von Quaternion zu Euler
 	float oy=state_.pose.pose.orientation.y;
 	float oz=state_.pose.pose.orientation.z;
@@ -85,9 +99,10 @@ void PurePursuit::calculateU()					//Schritte um u zu berechnen (Reglerspezyfisc
 
 	float alpha=theta1-theta2;
 		//float x_j=path.poses[10].pose.position.x;
-  std::cout<<alpha<<std::endl<<theta1<<std::endl<<theta2;
 	u_.speed=v;
+
 	u_.steering_angle=atan2(2*L*sin(alpha),l);
+
 	}
 	}
 
@@ -116,7 +131,6 @@ float PurePursuit::findReference(float l)		//erste referenz wird zw pathInfo(0) 
 void PurePursuit::publishU()
 	{
 	pub_stellgroessen_.publish(u_);
-	std::cout<<state_.current_arrayposition<< std::endl;
 	}
 
 float* PurePursuit::projectOnPath()					//gibt i.a. nicht Punkt
@@ -145,7 +159,9 @@ float* PurePursuit::projectOnPath()					//gibt i.a. nicht Punkt
 		float y_i=path_.poses[i].pose.position.y;
 
 		float lambda=(tan(theta)*(y_i-y_now)-(x_i-x_now))/((x_j-x_i)-tan(theta)*(y_j-y_i));	//analytisch
-		if(0<=lambda&&lambda<=1)
+		float dist_to_path=sqrt(pow((x_now-x_i),2)+pow((y_now-y_i),2));
+		float dist_to_path_old;
+		if(0<=lambda&&lambda<=1&&dist_to_path<dist)
 			{
 			x_projected[0]=x_i+lambda*(x_j-x_i);
 			x_projected[1]=y_i+lambda*(y_j-y_i);
@@ -169,3 +185,51 @@ arc_msgs::State PurePursuit::getState()
 	{
 	return state_;
 	}
+
+void PurePursuit::readPathFromTxt(std::string inFileName)
+	{
+
+	//  :	
+	std::fstream fin ; 	
+	fin . open ( inFileName. c_str ()) ;
+	if (! fin . is_open () )
+		{std::cout << " Fehler beim Oeffnen von " <<inFileName << std::endl ;}
+	//Länge des files
+	fin.seekg (-2, fin.end); //-2 um letztes | wegzuschneiden
+	int length = fin.tellg();
+	fin.seekg (0, fin.beg);
+	//stream erstellen mit chars von fin
+	char * file = new char [length];
+	fin.read (file,length);
+	std::istringstream stream(file,std::ios::in);
+	delete[] file;	
+	fin . close () ; // Schliessen
+	//schleife
+	int i=0;
+	int j;	
+	geometry_msgs::PoseStamped temp_pose;
+
+	while(!stream.eof()&& i<length)
+		{
+		geometry_msgs::PoseStamped temp_pose;	//erweitern des Array um einen poses
+		path_.poses.push_back(temp_pose);
+		stream>>j;
+		stream>>path_.poses[j-1].pose.position.x;
+		stream>>path_.poses[j-1].pose.position.y;
+		stream>>path_.poses[j-1].pose.position.z;
+
+		//std::cout<<j<<" "<<path_.poses[j-1].pose.position.x<<" "<<path_.poses[j-1].pose.position.y<<" "<<path_.poses[j-1].pose.position.z<<std::endl;		
+		stream.ignore (300, '|');
+		i++;	
+
+				
+		}
+
+	}
+
+PurePursuit::~PurePursuit(){}
+
+
+
+
+//text file mit in bestimmten Ordner suchen
