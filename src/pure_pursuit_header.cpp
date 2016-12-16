@@ -7,7 +7,7 @@ PurePursuit::PurePursuit(float k1,ros::NodeHandle* n)		//Konstruktor mit paramet
 	n_=n;
 	global=0;
 	std::cout<<"konstruktor"<<std::endl;
-	readPathFromTxt("pathRov_openLoop.txt");
+	readPathFromTxt("pathRov.txt");
 	state_.current_arrayposition=0;
 	//sub_path_ = n_->subscribe("path", 5,&PurePursuit::safeThePath,this);
 	sub_state_ = n_->subscribe("state", 10, &PurePursuit::sts,this);
@@ -64,7 +64,7 @@ void PurePursuit::calculateU()					//Schritte um u zu berechnen (Reglerspezyfisc
 	float v=10.0;
 	float L=3.0;
 	float v_abs=sqrt(pow(state_.pose_diff.twist.linear.x,2)+pow(state_.pose_diff.twist.linear.x,2));
-	float lad=5;
+	float lad=2;
 
 	//float j=findReference(lad);
 	//float theta1=atan2(pathInfo(j)[1]-(state_.pose.pose.position.y),pathInfo(j)[0]-(state_.pose.pose.position.x));
@@ -74,20 +74,22 @@ void PurePursuit::calculateU()					//Schritte um u zu berechnen (Reglerspezyfisc
 	//länge skalieren
 	float l=0;
 	int i=j;
+std::cout<<"hola "<<j<<std::endl;
 	while(l<lad)	
 		{
-		l+=sqrt(pow(path_.poses[int(j+1)].pose.position.x-path_.poses[int(j)].pose.position.x,2)+pow(path_.poses[int(j+1)].pose.position.y-path_.poses[int(j)].pose.position.y,2));
-		i++;
+		l+=sqrt(pow(path_.poses[i+1].pose.position.x-path_.poses[i].pose.position.x,2)+pow(path_.poses[i+1].pose.position.y-path_.poses[i].pose.position.y,2));
+		i=i+1;
 		}
-	std::cout<<i<<" "<<l<<std::endl;
+	std::cout<<j<<" "<<i<<" "<<l<<std::endl;
 	if(i<(sizeof(path_.poses)/sizeof(path_.poses[0]))-1)
 	{
-		theta1=atan2(path_.poses[i].pose.position.x-(state_.pose.pose.position.x),path_.poses[i].pose.position.y-	(state_.pose.pose.position.y));}
+		theta1=atan2(path_.poses[i].pose.position.y-(state_.pose.pose.position.y),path_.poses[i].pose.position.x-	(state_.pose.pose.position.x));}
 	else
 	{
 	  int ende=(sizeof(path_.poses)/sizeof(path_.poses[0]));
-	  theta1=atan2(path_.poses[ende].pose.position.x-(state_.pose.pose.position.x),path_.poses[ende].pose.position.y-	(state_.pose.pose.position.y));
+	  theta1=atan2(path_.poses[ende].pose.position.y-(state_.pose.pose.position.y),path_.poses[ende].pose.position.x-	(state_.pose.pose.position.x));
 	}
+	std::cout<<"theta1 bestimmt"<<std::endl;
 	float ox=state_.pose.pose.orientation.x;		//Transformation von Quaternion zu Euler
 	float oy=state_.pose.pose.orientation.y;
 	float oz=state_.pose.pose.orientation.z;
@@ -131,13 +133,46 @@ float PurePursuit::findReference(float l)		//erste referenz wird zw pathInfo(0) 
 void PurePursuit::publishU()
 	{
 	pub_stellgroessen_.publish(u_);
+	std::cout<<"Stellgrösse publiziert";
 	}
 
 float* PurePursuit::projectOnPath()					//gibt i.a. nicht Punkt
 	{
-								//aus path zurück, sondern zwischen zwei...
+							//aus path zurück, sondern zwischen zwei...
 	float x_projected[3];						//Eintrag 1,2 koordinaten, eintrag 3 currentarrayposition
-	float* x_projected_p=NULL;
+	float* x_projected_p=&x_projected[0];
+
+	float x_now=state_.pose.pose.position.x;
+	float y_now=state_.pose.pose.position.y;
+
+	float d_old=100;
+	float j=0;
+	for(int i=global;i<global+500;i++)
+		{
+			
+			
+												//einstellen
+			
+			float x_path=path_.poses[i].pose.position.x;
+			float y_path=path_.poses[i].pose.position.y;
+			float x_now=state_.pose.pose.position.x;
+			float y_now=state_.pose.pose.position.y;
+			float d_new=sqrt(pow((x_now-x_path),2)+pow((y_now-y_path),2));
+			if(d_new<d_old)
+				{
+				d_old=d_new;
+				j=i;
+				x_projected[0]=path_.poses[i].pose.position.x;
+				x_projected[1]=path_.poses[i].pose.position.y;
+				x_projected[2]=i;
+				}
+			
+			
+		}
+	global=j;
+	std::cout<<"Kleinster Abstand von Pfad:"<<d_old<<std::endl;
+	/*
+		bool b=0;
 
 	float ox=state_.pose.pose.orientation.x;		//Transformation von Quaternion zu Euler
 	float oy=state_.pose.pose.orientation.y;
@@ -148,30 +183,33 @@ float* PurePursuit::projectOnPath()					//gibt i.a. nicht Punkt
 	eul=arc_tools::transformEulerQuaternionMsg(quat);
 	float theta=eul.z;
 
-	float x_now=state_.pose.pose.position.x;
-	float y_now=state_.pose.pose.position.y;
-	for(int i=0;i<(sizeof(path_.poses)/sizeof(path_.poses[0]))-1;i++)		//schaut alle LINEAREN Interpolationen
+	for(int i=0;i<n_poses_path_-10;i++)		//schaut ALLE linearen Interpolationen
 										//zw punktepaaren durch
 		{
 		float x_j=path_.poses[i+1].pose.position.x;
 		float x_i=path_.poses[i].pose.position.x;
 		float y_j=path_.poses[i+1].pose.position.y;
 		float y_i=path_.poses[i].pose.position.y;
-
 		float lambda=(tan(theta)*(y_i-y_now)-(x_i-x_now))/((x_j-x_i)-tan(theta)*(y_j-y_i));	//analytisch
 		float dist_to_path=sqrt(pow((x_now-x_i),2)+pow((y_now-y_i),2));
-		float dist_to_path_old;
-		if(0<=lambda&&lambda<=1&&dist_to_path<dist)
+		float dist_to_path_old=100000;
+		if(0<=lambda&&lambda<=1&&dist_to_path<dist_to_path_old)
 			{
 			x_projected[0]=x_i+lambda*(x_j-x_i);
 			x_projected[1]=y_i+lambda*(y_j-y_i);
 			x_projected[2]=i;
-			x_projected_p=&x_projected[0];
-			return x_projected_p;
+			dist_to_path_old=dist_to_path;
+			std::cout<<"ciao"<<std::endl;
+			b=1;
 			}
 		}
-
-	if(&x_projected_p==NULL){std::cout<<"Fehler, senkrecht zu Fahrzeug liegt kein Pfad";}
+	if(b==0)
+		{
+		std::cout<<"Fehler, senkrecht zu Fahrzeug liegt kein Pfad, es bewegt sicj nun zum Pfadanfang";
+		x_projected[0]=0;
+		x_projected[1]=0;
+		x_projected[2]=5;		
+		}*/
 	return x_projected_p;						//Sollte eine fehlermeldung geben
 	}
 
@@ -221,10 +259,9 @@ void PurePursuit::readPathFromTxt(std::string inFileName)
 		//std::cout<<j<<" "<<path_.poses[j-1].pose.position.x<<" "<<path_.poses[j-1].pose.position.y<<" "<<path_.poses[j-1].pose.position.z<<std::endl;		
 		stream.ignore (300, '|');
 		i++;	
-
-				
 		}
-
+	n_poses_path_=i;
+	std::cout<<" "<<n_poses_path_<<std::endl;
 	}
 
 PurePursuit::~PurePursuit(){}

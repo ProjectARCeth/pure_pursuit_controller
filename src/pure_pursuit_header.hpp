@@ -44,6 +44,7 @@ private :
 	ros::Subscriber sub_path_;
 	ros::Publisher pub_stellgroessen_;
 	float global; 
+	int n_poses_path_;
 protected:
 
 };
