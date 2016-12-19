@@ -7,12 +7,12 @@ PurePursuit::PurePursuit(float k1,ros::NodeHandle* n)		//Konstruktor mit paramet
 	n_=n;
 	global=0;
 	std::cout<<"konstruktor"<<std::endl;
-	readPathFromTxt("pathRov.txt");
+	readPathFromTxt("pathRov_openLoop.txt");
 	state_.current_arrayposition=0;
 	//sub_path_ = n_->subscribe("path", 5,&PurePursuit::safeThePath,this);
 	sub_state_ = n_->subscribe("state", 10, &PurePursuit::sts,this);
 	pub_stellgroessen_ = n_->advertise<ackermann_msgs::AckermannDrive>("stellgroessen", 10);
-
+	track_error_pub = n_->advertise<std_msgs::Float64>("track_error", 10);
 	}
 
 /*void PurePursuit::safeThePath(const nav_msgs::Path::ConstPtr& subscribed)
@@ -110,7 +110,7 @@ std::cout<<"hola "<<j<<std::endl;
 
 float PurePursuit::findReference(float l)		//erste referenz wird zw pathInfo(0) und pathInfo(200) gesucht
 	{
-	float e=100;
+	float e=1000;
 	float j;
 	for(float i=global; i<(global+200); i=i+0.1)	//je nach Pfad grenzen und schritte
 												//einstellen
@@ -145,7 +145,7 @@ float* PurePursuit::projectOnPath()					//gibt i.a. nicht Punkt
 	float x_now=state_.pose.pose.position.x;
 	float y_now=state_.pose.pose.position.y;
 
-	float d_old=100;
+	float d_old=1000;
 	float j=0;
 	for(int i=global;i<global+500;i++)
 		{
@@ -171,6 +171,10 @@ float* PurePursuit::projectOnPath()					//gibt i.a. nicht Punkt
 		}
 	global=j;
 	std::cout<<"Kleinster Abstand von Pfad:"<<d_old<<std::endl;
+		std::cout<<"Cross Track Error = "<<d_old<<std::endl;
+		std_msgs::Float64 err;
+		err.data = d_old;
+		track_error_pub.publish(err);
 	/*
 		bool b=0;
 
@@ -212,6 +216,7 @@ float* PurePursuit::projectOnPath()					//gibt i.a. nicht Punkt
 		}*/
 	return x_projected_p;						//Sollte eine fehlermeldung geben
 	}
+
 
 void PurePursuit::setState(float x, float y)
 	{

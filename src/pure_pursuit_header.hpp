@@ -8,6 +8,7 @@
 #include"geometry_msgs/PoseStamped.h"
 #include"arc_tools/coordinate_transform.hpp"
 #include"geometry_msgs/Vector3.h"
+#include "std_msgs/Float64.h"
 #include <iostream>
 #include <fstream>
 #include <sstream>
@@ -45,6 +46,7 @@ private :
 	ros::Publisher pub_stellgroessen_;
 	float global; 
 	int n_poses_path_;
+	ros::Publisher track_error_pub;
 protected:
 
 };
