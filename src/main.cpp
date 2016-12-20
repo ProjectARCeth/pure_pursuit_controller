@@ -6,20 +6,13 @@ int main(int argc, char **argv)
 	{
 	ros::init(argc, argv, "regler_node");
 	ros::NodeHandle n;
-	float k1=0.5;
+	float k1=0.5;	//je grösser k1 desto grösser der laterale fehler aber sanfter die fahrt
 	PurePursuit PP(k1,&n);
-	//PP.setState(0,3);
-		//float j1=PP.findReference(19);
-		//PP.setState(0,5);
-		//float j2=PP.findReference(19);
-	//float b=fabs(-2324.3);
-//	float a=atan2(5,-2);
 
-	//std::cout<<a<<std::endl;
-	ros::spin();		//hier gut verstehen wie spin..
+	ros::spin();		
 	return 0;
 	}
 
-//spin spinonce ? wie wäre ein bsp?
+
 
 
