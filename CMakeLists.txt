@@ -9,7 +9,7 @@ find_package(catkin_simple 0.1.0 REQUIRED COMPONENTS roscpp arc_tools geometry_m
 catkin_simple(ALL_DEPS_REQUIRED)
 
 cs_add_library(${PROJECT_NAME}
-	src/pure_pursuit_header.cpp
+	src/pure_pursuit_controller.cpp
 )
 
 #include_directories(include ${catkin_INCLUDE_DIRS})
@@ -20,7 +20,7 @@ cs_add_library(${PROJECT_NAME}
 
 
 ## Declare a C++ executable
-add_executable(regler_node src/main.cpp)
+add_executable(regler_node src/pure_pursuit_controller_node.cpp)
 
 ## Add cmake target dependencies of the executable
 ## same as for the library above
