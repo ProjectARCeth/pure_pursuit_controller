@@ -1,4 +1,9 @@
 #include"../include/pure_pursuit_controller/pure_pursuit_controller.hpp"
+
+float mu_haft=0.8;
+float g_earth=9.81;
+float v_max=25;
+
 PurePursuit::PurePursuit(){}
 PurePursuit::PurePursuit(float k1,ros::NodeHandle* n)
 	{
@@ -8,7 +13,7 @@ PurePursuit::PurePursuit(float k1,ros::NodeHandle* n)
 	n_=n;
 	global=0;
 	//Argument ist Pfad von dem .txt file, User-spezyfisch.
-	readPathFromTxt("/home/moritz/.ros/Paths/pathRov_openLoop.txt");
+	readPathFromTxt("/home/moritz/.ros/Paths/pathRov.txt");
 	state_.current_arrayposition=0;
 	sub_state_ = n_->subscribe("state", 10, &PurePursuit::sts,this);
 	pub_stellgroessen_ = n_->advertise<ackermann_msgs::AckermannDrive>("stellgroessen", 10);
@@ -21,7 +26,8 @@ void PurePursuit::sts(const arc_msgs::State::ConstPtr& subscribed)
 	{
 	
 	state_=*subscribed;
-	this->calculateU();
+	this->calculateSteer();
+	this->calculateAccel();
 	this->publishU();
 	this->path_publisher.publish(path_);
 	std::cout<<"END OF LOOP"<<std::endl;
@@ -31,7 +37,7 @@ void PurePursuit::publishU()
 	pub_stellgroessen_.publish(u_);
 	}
 
-void PurePursuit::calculateU()					
+void PurePursuit::calculateSteer()					
 	{
 	if(manual_u_==false)
 	{
@@ -49,6 +55,7 @@ void PurePursuit::calculateU()
 	//float theta1=atan2(dy,dx);
 //Oder.
   	float j=nearestPoint()[2];
+	state_.current_arrayposition=j;
 	float l=0;
 	int i=j;
 	//Länge skalieren.
@@ -82,11 +89,59 @@ void PurePursuit::calculateU()
 	eul=arc_tools::transformEulerQuaternionMsg(quat);
 	float theta2=-eul.z;
 	float alpha=theta1-theta2;
-	u_.speed=v;
 	u_.steering_angle=atan2(2*L*sin(alpha),l);
 	}
 	}
 //welcher punkt auf Pfad hat gewissen Abstand l von mir.
+void PurePursuit::calculateAccel()
+	{
+//First calculate optimal velocity
+	//for the moment take curvature at fix distance lad_v
+	float lad_v;
+	float curve_rad=1/curvaturePath(lad_v);
+	float v_limit=sqrt(mu_haft*curve_rad*g_earth);
+	
+	//safety factor [0-1]
+	float C=1;	
+
+	//penalize lateral error from paht, half for 1m error
+	C=C*1/(1+abs(lateral_error_));
+	
+	//slow down gradually when arrive at l_slow_down from end of of path
+	float l_slow_down=20;
+	float l_dumb=0;
+	int i=n_poses_path_;
+	while(l_dumb<l_slow_down)	  	
+		{
+		l_dumb+=sqrt(pow(path_.poses[i-1].pose.position.x-path_.poses[i-2].pose.position.x,2)+pow(path_.poses[i-1].pose.position.y-path_.poses[i-2].pose.position.y,2));
+		i=i-1;
+		}
+	if (state_.current_arrayposition>i)
+		{
+		std::cout<<"SLOW DOWN we reached index "<<i;
+		C=C*(n_poses_path_-state_.current_arrayposition-1)/(n_poses_path_-i);
+		}
+	
+	float v_ref=C*v_limit;
+	//upper limit, HERE 25 m/s;
+	if(v_ref>v_max)
+		{
+		std::cout<<"Upper limit of 25 reached. "<<v_ref<<" is too fast"<<std::endl;
+		v_ref=v_max;
+		}
+	//not too divergent from teach part.... not possible because no v info of teach part
+	
+	//Conversion  to accelleration
+	//make it dependent from street inclination measurable from state: a*=1+inclination;
+	float a=0.5;
+//Control of acceleration, proportional control
+	float v_now=sqrt(pow(state_.pose_diff.twist.linear.x,2)+pow(state_.pose_diff.twist.linear.x,2));
+	float delta_v=v_ref-v_now;
+	a=0.08*delta_v;
+	u_.acceleration=a;
+
+	std::cout<<"v_limit= "<<v_limit<<std::endl<<"v_ref= "<<v_ref<<std::endl<<"v_now= "<<v_now<<std::endl<<"Acceleration= "<<a<<std::endl;
+	}	
 float PurePursuit::findReference(float l)		
 	{
 	float e=1000;
@@ -133,7 +188,8 @@ float* PurePursuit::nearestPoint()
 	global=j;
 	std::cout<<"Cross Track Error in cm = "<<d_old*100<<std::endl;
 	std_msgs::Float64 err;
-	err.data = d_old;
+	lateral_error_=d_old;
+	err.data = lateral_error_;
 	track_error_pub.publish(err);
 
 	/*Alternativ:Senkrecht zum auto den punkt auf dem Pfad nehmen... Fehlerheft...
@@ -245,4 +301,10 @@ void PurePursuit::setManual(bool b)
 	}
 
 PurePursuit::~PurePursuit(){}
+
+//Ersteller einer Fake-Krümmung fürs Moment
+float PurePursuit::curvaturePath(float lad_v)
+	{
+	return 0.01;
+	}
 

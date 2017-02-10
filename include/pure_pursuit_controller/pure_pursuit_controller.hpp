@@ -32,13 +32,15 @@ public :
 	//manuelles überschreiben von u möglich
 	void setU(ackermann_msgs::AckermannDrive u);	
 	//Schritte um u zu berechnen (Reglerspezyfisch)
-	void calculateU();				
+	void calculateSteer();			
+	void calculateAccel();	
 	void publishU();
 	void sts(const arc_msgs::State::ConstPtr& subscribed);
 	float* nearestPoint();
 	void setState(float x, float y);
 	arc_msgs::State getState();
 	void setManual(bool b);
+	float curvaturePath(float lad_v);
 
 private :
 	float k_;
@@ -54,6 +56,7 @@ private :
 	float global; 
 	int n_poses_path_;
 	ros::Publisher track_error_pub;
+	float lateral_error_;
 protected:
 
 };

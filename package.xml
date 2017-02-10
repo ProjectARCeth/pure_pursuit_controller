@@ -42,13 +42,11 @@
   <buildtool_depend>catkin</buildtool_depend>
   <build_depend>roscpp</build_depend>
   <build_depend>nav_msgs</build_depend>
-  <build_depend>regler1</build_depend>
   <build_depend>ackermann_msgs</build_depend>
   <build_depend>catkin_simple</build_depend>
   <build_depend>arc_tools</build_depend>
   <run_depend>roscpp</run_depend>
   <run_depend>nav_msgs</run_depend>
-  <run_depend>regler1</run_depend>
   <run_depend>ackermann_msgs</run_depend>
   <run_depend>catkin_simple</run_depend>
   <run_depend>arc_tools</run_depend>
