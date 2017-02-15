@@ -65,18 +65,17 @@ void PurePursuit::calculateSteer()
 	float v_abs = sqrt(pow(state_.pose_diff.twist.linear.x,2) + pow(state_.pose_diff.twist.linear.x,2));
 	// Empirical linear function to determine the look-ahead-distance.
 	float lad = k2_lad_ + k1_lad_*v_abs;
-
+	// Get the index of the nearest point.
   int j = nearestPoint();
 	state_.current_arrayposition = j;
 	float l = 0;
 	int i = j;
-	//Länge skalieren.
 	while(l<lad)
 	{
 		l += sqrt(pow(path_.poses[i+1].pose.position.x - path_.poses[i].pose.position.x,2)+pow(path_.poses[i+1].pose.position.y - path_.poses[i].pose.position.y,2));
 		i = i+1;
 	}
-	std::cout<<"Nearest index= "<<j<<std::endl<<"Reference index= "<<i<<" "<<l<<std::endl;
+	std::cout<<"Nearest point index= "<<j<<std::endl<<"Reference index (LAD) = "<<i<<" "<<l<<std::endl;
 	if(i<n_poses_path_-1)
 	{
 		float dy = path_.poses[i].pose.position.y - (state_.pose.pose.position.y);
@@ -90,7 +89,7 @@ void PurePursuit::calculateSteer()
 		theta1 = atan2(dy,dx);
 	}
 
-	//Transformation von Quaternion zu Euler.
+	// Transformation quaternion to euler angles.
 	float ox = state_.pose.pose.orientation.x;
 	float oy = state_.pose.pose.orientation.y;
 	float oz = state_.pose.pose.orientation.z;
@@ -100,12 +99,13 @@ void PurePursuit::calculateSteer()
 	eul = arc_tools::transformEulerQuaternionMsg(quat);
 	float theta2 = -eul.z;
 	float alpha = theta1 - theta2;
+	// Pure Pursuit Controller Formula.
 	u_.steering_angle = atan2(2*wheel_base_*sin(alpha),l);
 }
 // Method which calculates the ideal speed, using the self-derived empirical formula.
 void PurePursuit::calculateVel()
 {
-	// do nothing
+	// Do nothing.
 }
 // Method which publishes the calculated commands onto the topic to the system engineers interface node.
 void PurePursuit::publishU()
@@ -161,19 +161,25 @@ void PurePursuit::readPathFromTxt(std::string inFileName)
 // Method which finds the nearest point and returns its index.
 int PurePursuit::nearestPoint()
 {
-	// Array with 3 elements.
+	// Array with 3 elements which will store the coordinates and the index of the nearest point.
 	float x_projected[3];
-	float* x_projected_p = &x_projected[0];
+	// Copy the current state to a local variable to avoid deleting or overwriting the current state.
 	float x_now = state_.pose.pose.position.x;
 	float y_now = state_.pose.pose.position.y;
+	// Define a ridiculously large distance as a starting point.
 	float d_old = 1000;
+	// Variable which will be used for iteration and then used for setting global.
 	float j = 0;
-	//Wenn am Ende der Strecke bleibt der nearest point der letzte Pfadpunkt.
+	// Variable used for publishing the cross-track error.
+	std_msgs::Float64 err;
+
+	// Iterate 200 point ahead of last current array position (global). Either 200 forward or the last path point.
 	for(int i = global; i<global+200 && i<n_poses_path_; i++)
 	{
 		float x_path = path_.poses[i].pose.position.x;
 		float y_path = path_.poses[i].pose.position.y;
-		float d_new = sqrt(pow((x_now-x_path),2)+pow((y_now-y_path),2));
+		float d_new = sqrt(pow((x_now - x_path),2) + pow((y_now - y_path),2));
+		// Update the current array position if a nearer point was found.
 		if(d_new < d_old)
 		{
 			d_old = d_new;
@@ -183,13 +189,17 @@ int PurePursuit::nearestPoint()
 			x_projected[2] = i;
 		}
 	}
+	// Set a current array position which can't be overwritten from sts.
 	global = j;
+	// Display the current cross-track error.
 	std::cout<<"Cross Track Error in cm = "<<d_old*100<<std::endl;
-	std_msgs::Float64 err;
+	// Save the cross-track error to a member variable.
 	lateral_error_ = d_old;
 	err.data = lateral_error_;
+	// Publish the cross-track error.
 	track_error_pub.publish(err);
-	return x_projected_p[2];
+	// Return the index of the nearest point.
+	return x_projected[2];
 }
 // Method which returns the current state.
 arc_msgs::State PurePursuit::getState()
