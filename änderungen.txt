@@ -220,3 +220,8 @@ float PurePursuit::findReference(float l)
 
 	// Entfernt von pp hpp
 	float findReference(float l);
+
+	// Entfernt aus calSteer methode
+	float v = 10.0;
+
+	// Nearest point methode returns an index and not a vector anymore.

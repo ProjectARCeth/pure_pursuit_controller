@@ -15,7 +15,7 @@
 
 class PurePursuit{
 
-public :
+public:
 	// 1. Constructors and Destructors.
 	// Default constructor.
 	PurePursuit();
@@ -37,8 +37,8 @@ public :
 	// 3. Helper methods for the controller.
 	// Method which will be called in the constructor. Reads in the text-file which contains the teach-path and saves it.
 	void readPathFromTxt(std::string inFileName);
-	// Method which finds the nearest point.
-	float* nearestPoint();
+	// Method which finds the nearest point and returns its index.
+	int nearestPoint();
 	// Method which returns the current state.
 	arc_msgs::State getState();
 	// Method which returns the calculated control commands.
@@ -74,4 +74,6 @@ private:
 	ackermann_msgs::AckermannDrive u_;
 	// Variable which can be used for calculating the current lateral error. Can be used to display the controllers performance.
 	float lateral_error_;
+	// The current array position which won't be overwritten by the incoming state.
+	int global;
 };

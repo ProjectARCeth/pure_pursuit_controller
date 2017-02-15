@@ -11,9 +11,10 @@ int main(int argc, char **argv)
 	ros::NodeHandle n;
 
 	// k_lad is the tuning knob for the look-ahead-distance of the pure_pursuit_controller.
-	// The bigger k_lad, the bigger the lateral error but the smoother ride.
-	float k_lad = 0.5;
-	PurePursuit PP(k_lad, &n, file_location_path_txt);
+	float k1_lad = 0.5;
+	float k2_lad = 3.0;
+	// Create a PP-controller object.
+	PurePursuit PP(k1_lad, k2_lad, &n, file_location_path_txt);
 
 	// Start the callback functions.
 	ros::spin();
