@@ -34,6 +34,10 @@ void BezierCurve:.setCurrentArrayIndex(int curr_index)
 {
     current_arrayposition_ = curr_index;
 }
+void BezierCurve::setActiveT(float t)
+{
+  active_t_ = t;
+}
 
 // Object using methods.
 // Find and set the nearest t;
@@ -62,12 +66,25 @@ void BezierCurve::calcCurvature(float t)
 }
 void BezierCurve::calcXyDot(float t)
 {
+  float x_dot = 0.0;
+  float y_dot = 0.0;
 
-
+  for(int i = 0; )
+  {
+    x_dot = x_dot + ;
+    y_dot = y_dot + ;
+  }
 }
 void BezierCurve::calcXyDotDot(float t)
 {
+  float x_dot = 0.0;
+  float y_dot = 0.0;
 
+  for(int i = 0; )
+  {
+    x_dot = x_dot + ;
+    y_dot = y_dot + ;
+  }
 }
 float BezierCurve::getCurvature
 {

@@ -21,6 +21,8 @@ class BezierCurve{
     void setNumbCtrlPoints(int numb_ctr_points);
     // Set the index of the point (in path_) around which the bezier-curve should be located.
     void setCurrentArrayIndex(int curr_index);
+    // Set the active t (where to evaluate Curve).
+    void setActiveT(float t);
 
     // Object using methods.
     // Do stuff with the previously defined bezier-curve.
@@ -34,6 +36,8 @@ class BezierCurve{
     void calcXyDot(float t);
     // At the current nearest_t_, calculate and set the second derivatives w.r.t to parameter t. Will be mainly used in calcCurvature.
     void calcXyDotDot(float t);
+    // Output the interpolated curve value at parameter t.
+    Eigen::Vector3d curveAtT(float t);
     // Output the calculated curvature at the active t.
     float getCurvature();
 
@@ -43,6 +47,10 @@ class BezierCurve{
       nav_msgs::Path path_;
       // How many points should be used for the bezier curve?.
       int numb_ctr_points_;
+      // Dynamic Vector with the needed x-coordinates of path points.
+      float* x_path;
+      // Dynamic Vector with the needed y-coordinates of path points.
+      float* y_path;
       // Current array position.
       int current_arrayposition_;
       // Using the current_arrayposition find the nearest parameter t and set this t to active t.
