@@ -20,7 +20,9 @@ class BezierCurve{
     // Set the number of control points of the bezier-curve.
     void setNumbCtrlPoints(int numb_ctr_points);
     // Set the index of the point (in path_) around which the bezier-curve should be located.
-    void setCurrentArrayIndex(int curr_index);
+    void setCenterIndex(int center_index);
+    // Set the points which will be used as control points (-->control polygon).
+    void setCtrlPoints();
     // Set the active t (where to evaluate Curve).
     void setActiveT(float t);
 
@@ -47,12 +49,12 @@ class BezierCurve{
       nav_msgs::Path path_;
       // How many points should be used for the bezier curve?.
       int numb_ctr_points_;
+      // Path index around which the .
+      int center_index_;
       // Dynamic Vector with the needed x-coordinates of path points.
-      float* x_path;
+      float* x_path_;
       // Dynamic Vector with the needed y-coordinates of path points.
-      float* y_path;
-      // Current array position.
-      int current_arrayposition_;
+      float* y_path_;
       // Using the current_arrayposition find the nearest parameter t and set this t to active t.
       float nearest_t_;
       // Parameter t at which the following variables will be calculated and stored.

@@ -30,9 +30,38 @@ void BezierCurve::setNumbCtrlPoints(int numb_ctr_points)
 {
   numb_ctr_points_ = numb_ctr_points;
 }
-void BezierCurve:.setCurrentArrayIndex(int curr_index)
+void BezierCurve::setCenterIndex(int center_index)
 {
-    current_arrayposition_ = curr_index;
+    center_index_ = center_index;
+}
+void BezierCurve::setCtrlPoints()
+{
+  // Clear up what was saved earlier.
+  delete[] x_path_;
+  delete[] y_path_;
+  // Set new size of control points arrays.
+  x_path = new float[numb_ctr_points_];
+  y_path = new float[numb_ctr_points_];
+  // Assign values to resized arrays.
+  // Differentiate between numb_ctr_points_ being even or odd.
+  if(numb_ctr_points_%2 == 0)
+  	{
+      // Number of Control Points is even ==> Look one point more ahead than behind!
+  		for(int i = 0; i<numb_ctr_points_; i++)
+      {
+        x_path_[i] = path_.poses[center_index_ - ((numb_ctr_points_ - 1)/2) + 1].pose.position.x;
+        y_path_[i] = path_.poses[center_index_ - ((numb_ctr_points_ - 1)/2) + 1].pose.position.y;
+      }
+  	}
+  	else if(numb_ctr_points_%2 != 0)
+  	{
+      // Number of Control Points is odd.
+  		for(int i = 0; i<numb_ctr_points_; i++)
+      {
+        x_path_[i] = path_.poses[center_index_ - ((numb_ctr_points_ - 1)/2)].pose.position.x;
+        y_path_[i] = path_.poses[center_index_ - ((numb_ctr_points_ - 1)/2)].pose.position.y;
+      }
+  	}
 }
 void BezierCurve::setActiveT(float t)
 {
