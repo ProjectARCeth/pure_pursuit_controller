@@ -97,25 +97,60 @@ void BezierCurve::calcXyDot(float t)
 {
   float x_dot = 0.0;
   float y_dot = 0.0;
+  int n = *this.numb_ctr_points_;
 
-  for(int i = 0; )
+  for(int i = 0; i < n + 1; i++)
   {
-    x_dot = x_dot + ;
-    y_dot = y_dot + ;
+    float dot_factor = i*pow(t, i - 1)*pow(1.0 - t, n - i) + pow(t, i)*(i - n)*pow(1.0 - t, n - i - 1) ;
+    x_dot = x_dot + x_path_[i]*BezierCurve::binomial(numb_ctr_points_ - 1, i)*dot_factor;
+    y_dot = y_dot + y_path_[i]*BezierCurve::binomial(numb_ctr_points_ - 1, i)*dot_factor;
   }
+
+  x_dot_ = x_dot;
+  y_dot_ = y_dot;
 }
 void BezierCurve::calcXyDotDot(float t)
 {
-  float x_dot = 0.0;
-  float y_dot = 0.0;
+  float x_dot_dot = 0.0;
+  float y_dot_dot = 0.0;
+  int n = *this.numb_ctr_points_;
 
-  for(int i = 0; )
+  for(int i = 0; i < n + 1; i++)
   {
-    x_dot = x_dot + ;
-    y_dot = y_dot + ;
+    float dot_dot_factor = i*(i - 1)*pow(t, i - 2)*pow(1.0 - t, n - i)
+    + i*pow(t, i - 1)*(i - n)*pow(n - i - 1)
+    + i*pow(t, i - 1)*(i - n)*pow(1.0 - t, n - i - 1)
+    + pow(t, i)*(n - i)*(n - i - 1)*(-1.0)*pow(1.0 - t, n - i - 2);
+    x_dot_dot = x_dot_dot + x_path_[i]*BezierCurve::binomial(numb_ctr_points_ - 1, i)*dot_dot_factor;
+    y_dot_dot = y_dot_dot + y_path_[i]*BezierCurve::binomial(numb_ctr_points_ - 1, i)*dot_dot_factor;
   }
+
+  x_dot_dot_ = x_dot_dot;
+  y_dot_dot_ = y_dot_dot;
 }
 float BezierCurve::getCurvature
 {
   return *this.curvature_;
+}
+
+// Helper methods.
+// n-factorial ==> n!. Is a static method.
+int BezierCurve::factorial(int n)
+{
+  int n_fac = 1;
+  if(n == 0)
+  {
+    n_fac = 1;
+  }
+  else
+  {
+    n_fac = BezierCurve::factorial(n-1);
+  }
+  return n_fac;
+}
+// Calculates binomial-coefficient a lower b. Is a static method.
+int BezierCurve::binomial(int a, int b)
+{
+  int binom = BezierCurve::factorial(a)/(BezierCurve::factorial(b)*BezierCurve::factorial(a - b));
+  return binom;
 }

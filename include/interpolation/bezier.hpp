@@ -43,6 +43,12 @@ class BezierCurve{
     // Output the calculated curvature at the active t.
     float getCurvature();
 
+    // Helper methods.
+    // n-factorial ==> n!.
+    static int factorial(int n);
+    // Calculates binomial-coefficient a lower b.
+    static int binomial(int a, int b);
+
   private:
       // Variables.
       // The path.
