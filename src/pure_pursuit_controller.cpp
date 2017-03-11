@@ -23,8 +23,6 @@ PurePursuit::PurePursuit(){}
 // Individual Constructor.
 PurePursuit::PurePursuit(ros::NodeHandle* n)
 {	
-
-	std::cout<<"Constructor"<<std::endl;
 	// 1. Save the arguments to member variables.
 	// Set the nodehandle.
 	n_ = n;
@@ -41,7 +39,6 @@ PurePursuit::PurePursuit(ros::NodeHandle* n)
 	obstacle_distance_=100;
 	pure_pursuit_gui_msg_.data.clear();
 	for(int i=0;i<10;i++) pure_pursuit_gui_msg_.data.push_back(0);
-	std::cout<<"Constructor"<<std::endl;
 	// 3. ROS specific setups.
 	// Publisher.
 	// Publishes the control commands to the interface node (TO VCU).
@@ -54,19 +51,8 @@ PurePursuit::PurePursuit(ros::NodeHandle* n)
 	distance_to_obstacle_sub_=n_->subscribe("/distance_to_obstacle",10,&PurePursuit::obstacleCallback,this);
 	gui_stop_sub_=n_->subscribe("/shut_down",10,&PurePursuit::guiStopCallback,this);
 	// Construction succesful.
-	std::cout << std::endl << "PURE PURSUIT: Initialized with path lenght: " << std::endl;
-	std::cout<<"Created path of length: "<<n_poses_path_<<std::endl;
-	pure_pursuit_gui_msg_.data.push_back(1.2);
-	std::cout<<"Slow down index= "<<slow_down_index_<<std::endl;
+	std::cout << std::endl << "PURE PURSUIT: Consturctor with path lenght: " <<n_poses_path_<< " and slow_down_index: "<<slow_down_index_<<std::endl;
 
-float R1=curveRadius(820);
-std::cout<<"Radius: "<<R1<<std::endl;
-/*
-for(int i=0;i<n_poses_path_;i+=100)
-{
-R1=curveRadius(i);
-std::cout<<"Radius: "<<R1<<std::endl<<std::endl;
-}*/
 }	
 // Default destructor.
 PurePursuit::~PurePursuit(){}
@@ -74,7 +60,6 @@ PurePursuit::~PurePursuit(){}
 // Callback Function/Method which waits for new state from L&M and then calculates the ideal control commands.
 void PurePursuit::stateCallback(const arc_msgs::State::ConstPtr& incoming_state)
 {	
-	std::cout<<"State CallBack"<<std::endl;
 	// Save the incoming state (from subscriber) to a member variable.
 	state_ = *incoming_state;
 	//Save absolute velocity for simplicity
@@ -88,9 +73,7 @@ void PurePursuit::stateCallback(const arc_msgs::State::ConstPtr& incoming_state)
 	float y_now = state_.pose.pose.position.y;
 	float z_now = state_.pose.pose.position.z;
 	tracking_error_ = sqrt(pow((x_now - x_path),2) + pow((y_now - y_path),2) + pow((z_now - z_path),2));
-	std::cout<<"ciao"<<std::endl;
 	pure_pursuit_gui_msg_.data[0]=distanceIJ(0,state_.current_arrayposition);
-	std::cout<<"cia"<<std::endl;
 	pure_pursuit_gui_msg_.data[1]=distanceIJ(state_.current_arrayposition,n_poses_path_-1);
 	// Calculate the steering angle using the PurePursuit Controller Formula.
 	this -> calculateSteer();
@@ -138,7 +121,6 @@ void PurePursuit::calculateSteer()
 	state_.current_arrayposition = nearestPoint();
 */
 	int i=indexOfDistanceFront(state_.current_arrayposition,lad);
-	std::cout<<"Current Arrayposition= "<<state_.current_arrayposition<<std::endl<<"Reference index for steering = "<<i<<std::endl;
 	float alpha=0;
 	if(i<n_poses_path_-1)
 	{	
@@ -148,7 +130,7 @@ void PurePursuit::calculateSteer()
 	}
 	else
 	{
-		std::cout<<"if else ist also NICHT unnötig!";
+
 
 		i=n_poses_path_-1;
 //		float dy = path_.poses[n_poses_path_-1].pose.position.y - (state_.pose.pose.position.y);
@@ -159,11 +141,9 @@ void PurePursuit::calculateSteer()
 	float l=distanceIJ(state_.current_arrayposition,i);
 	pure_pursuit_gui_msg_.data[2]=i;
 	geometry_msgs::Point referenz_local=arc_tools::globalToLocal(path_.poses[i].pose.position, state_);
-	std::cout<<referenz_local<<std::endl;
 	float dy = referenz_local.y;
 	float dx = referenz_local.x;
 	alpha = atan2(dy,dx);
-	std::cout<<"alpha= "<<alpha<<std::endl;
 	
 	// Transformation quaternion to euler angles.
 	float ox = state_.pose.pose.orientation.x;
@@ -178,18 +158,17 @@ void PurePursuit::calculateSteer()
 //	float alpha = theta1 - theta2;
 	// Pure Pursuit Controller Formula.
 	u_.steering_angle = atan2(2*WHEEL_BASE*sin(alpha),l);
-	std::cout<<u_.steering_angle<<std::endl;
 	pure_pursuit_gui_msg_.data[3]=u_.steering_angle;
 }
 // Method which calculates the ideal speed, using the self-derived empirical formula.
 void PurePursuit::calculateVel()	//""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
-{	std::cout<<"Start Calc Vel"<<std::endl;
+{
     //First calculate optimal velocity
 	//for the moment take curvature at fix distance lad_v
 	float lad_v= K2_LAD_V + K1_LAD_V*v_abs_;
 	//find reference index for curvature
 	int i=indexOfDistanceFront(state_.current_arrayposition, lad_v);
-	if(i=n_poses_path_) i=n_poses_path_-1;
+	if(i>=n_poses_path_) i=n_poses_path_-1;
 
 	pure_pursuit_gui_msg_.data[4]=i;
 	float v_limit=sqrt(MAX_LATERAL_ACCELERATION_EROD*curveRadius(i));		//Physik stimmt?
@@ -198,48 +177,53 @@ void PurePursuit::calculateVel()	//"""""""""""""""""""""""""""""""""""""""""""""
 	float C=C_VEL;
 	//penalize lateral error from paht, half for 1m error
 	C=C/(1+abs(tracking_error_));
-	std::cout<<"Penalisation after lateral error "<<C<<std::endl;
+std::cout<<"lateral error "<<C<<std::endl;
 	//Obstacle distance
 	float brake_dist=pow(v_abs_*3.6/10,2)/2;	//Physikalisch Sinn??
 	pure_pursuit_gui_msg_.data[7]=brake_dist;
 	if((obstacle_distance_>brake_dist)&&(obstacle_distance_<2*brake_dist))
 	{	
-		std::cout<<"Case1"<<std::endl;
+		//std::cout<<"Case1"<<std::endl;	//Comments important at obstacle detection testing
 		C=C*(obstacle_distance_/brake_dist)-1;
 	}
 	else if (obstacle_distance_>=2*brake_dist)
 	{
-		std::cout<<"Case2"<<std::endl;
+		//std::cout<<"Case2"<<std::endl;
 		C=C;
 	}
 	else if (obstacle_distance_<=brake_dist)
 	{
-		std::cout<<"Case3"<<std::endl;
+		//std::cout<<"Case3"<<std::endl;
 		C=0;
 	}
+
 	//Orientation error not yet implemented
-	std::cout<<"Penalisation after obstacle distance "<<C<<std::endl;
     //Slow down
 	//slow down gradually when arrive at SLOW_DOWN_DISTANCE from end of of path
 
 	if (state_.current_arrayposition>=slow_down_index_)
 		{
-		std::cout<<"SLOW DOWN we reached slow_down_index "<<slow_down_index_<<std::endl<<"Distance to end: "<<distanceIJ(state_.current_arrayposition,n_poses_path_-1)<<std::endl;
+		std::cout<<"PURE PURSUIT: We reached slow_down_index "<<slow_down_index_<<std::endl<<"Distance to end: "<<distanceIJ(state_.current_arrayposition,n_poses_path_-1)<<std::endl;
 		//Lineares herrunterschrauben
 		C=C*(distanceIJ(state_.current_arrayposition,n_poses_path_-1))/(SLOW_DOWN_DISTANCE);
 		}
 	//If shut down action is running
-	if(gui_stop_==1)//&& time zwischen 0 und pi/2
+	if(gui_stop_==1&&BigBen_.getTimeFromStart()<=SHUT_DOWN_TIME)//&& time zwischen 0 und pi/2
 		{
-		std::cout<<"Shutting down gradually"<<std::endl;
-		C=C*cos(BigBen_.getTimeFromStart()*1.57079632679/SHUT_DOWN_TIME);	//Zähler ist PI/2.
+		std::cout<<"PURE PURSUIT: Shutting down gradually"<<std::endl;
+		C=C*cos(BigBen_.getTimeFromStart()*1.57079632679/(SHUT_DOWN_TIME));	//Zähler ist PI/2.
+		}
+	else if (gui_stop_==1 && BigBen_.getTimeFromStart()>SHUT_DOWN_TIME)
+		{
+		std::cout<<"PURE PURSUIT: Shutted Down"<<std::endl;
+		C=0;
 		}
 	float v_ref=v_limit*C;
 //Upper buonds
 	//upper limit, HERE 25 m/s;
 	if(v_ref>MAX_ABSOLUTE_VELOCITY)
 		{
-		std::cout<<"Upper limit of 25 reached. "<<v_ref<<" is too fast"<<std::endl;
+		std::cout<<"PURE PURSUIT: Upper limit of 25 reached. "<<v_ref<<" is too fast"<<std::endl;
 		v_ref=MAX_ABSOLUTE_VELOCITY;
 		}
 	//not too divergent from teach part
@@ -249,7 +233,7 @@ void PurePursuit::calculateVel()	//"""""""""""""""""""""""""""""""""""""""""""""
 	pure_pursuit_gui_msg_.data[8]=v_teach+V_FREEDOM;
 	if(v_ref>v_teach+V_FREEDOM)
 		{
-		std::cout<<"Too divergent from teach velocity" <<std::endl;
+		std::cout<<"PURE PURSUIT: Too divergent from teach velocity" <<std::endl;
 		v_ref=v_teach+V_FREEDOM;
 		}
 
@@ -257,7 +241,6 @@ void PurePursuit::calculateVel()	//"""""""""""""""""""""""""""""""""""""""""""""
 	u_.speed=v_ref;
 	pure_pursuit_gui_msg_.data[9]=u_.speed;
 	u_.acceleration=v_abs_;
-	std::cout<<"lateral error= "<<tracking_error_<<std::endl<<"brake_dist= "<<brake_dist<<std::endl<<"v_limit= "<<v_limit<<std::endl<<"v_abs_= "<<v_abs_<<std::endl<<"C= "<<C<<std::endl<<"v_teach= "<<v_teach<<std::endl;
 }//"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 // Method which publishes the calculated commands onto the topic to the system engineers interface node.
 void PurePursuit::publishU()
@@ -277,7 +260,7 @@ void PurePursuit::readPathFromTxt(std::string inFileName)
 	// Check if stream is open.
 	if (!fin.is_open())
 	{
-		std::cout << "Error with opening of  " <<inFileName << std::endl;
+		std::cout << "PURE PURSUIT: Error with opening of  " <<inFileName << std::endl;
 	}
 
 	// Truncate two lines of the file to get rid of the last '|'.
@@ -317,66 +300,19 @@ void PurePursuit::readPathFromTxt(std::string inFileName)
 
 		stream.ignore (300, '|');
 		i++;
-		if(j-1>n_poses_path_-1){std::cout<<"!!!!!!!!LAUFZEITFEHLER::readPathFromTxt!!!!!!!!!!!"<<std::endl;}
+		if(j-1>n_poses_path_-1){std::cout<<"PURE PURSUIT: readPathFromTxt"<<std::endl;}
 	}
 	n_poses_path_ = i;
 	float l_dumb=0;
-	i=n_poses_path_;
+	i=n_poses_path_-1;
 	while(l_dumb<SLOW_DOWN_DISTANCE)
 		{
-		l_dumb+=distanceIJ(i-1,i);//sqrt(pow(path_.poses[i-1].pose.position.x-path_.poses[i-2].pose.position.x,2)+pow(path_.poses[i-1].pose.position.y-path_.poses[i-2].pose.position.y,2)+pow(path_.poses[i-1].pose.position.z-path_.poses[i-2].pose.position.z,2));
+		l_dumb+=distanceIJ(i-1,i);
 		i--;
 		}
 	slow_down_index_=i;
 }
 
-//No need if in state msg current_arrajposition is given
-/*
-// Method which finds the nearest point and returns its index.
-int PurePursuit::nearestPoint()
-{
-	// Array with 3 elements which will store the coordinates and the index of the nearest point.
-	float x_projected[3];
-	// Copy the current state to a local variable to avoid deleting or overwriting the current state.
-	float x_now = state_.pose.pose.position.x;
-	float y_now = state_.pose.pose.position.y;
-	// Define a ridiculously large distance as a starting point.
-	float d_old = 1000;
-	// Variable which will be used for iteration and then used for setting global_.
-	float j = 0;
-	// Variable used for publishing the cross-track error.
-	std_msgs::Float64 err;
-
-	// Iterate 200 point ahead of last current array position (global_). Either 200 forward or the last path point.
-	for(int i = global_; i<global_+200 && i<n_poses_path_; i++)
-	{
-		float x_path = path_.poses[i].pose.position.x;
-		float y_path = path_.poses[i].pose.position.y;
-		float d_new = sqrt(pow((x_now - x_path),2) + pow((y_now - y_path),2));
-		if(i>n_poses_path_-1){std::cout<<"!!!!!!!!LAUFZEITFEHLER::nearestPoint!!!!!!!!!!!"<<std::endl;}
-		// Update the current array position if a nearer point was found.
-		if(d_new < d_old)
-		{
-			d_old = d_new;
-			j = i;
-			x_projected[0] = path_.poses[i].pose.position.x;
-			x_projected[1] = path_.poses[i].pose.position.y;
-			x_projected[2] = i;
-		}
-	}
-	// Set a current array position which can't be overwritten from stateCallback.
-	global_ = j;
-	// Display the current cross-track error.
-	std::cout<<"Cross Track Error in cm = "<<d_old*100<<std::endl;
-	// Save the cross-track error to a member variable.
-	tracking_error_ = d_old;
-	err.data = tracking_error_;
-	// Publish the cross-track error.
-	track_error_pub_.publish(err);
-	// Return the index of the nearest point.
-	return x_projected[2];
-}
-*/
 
 float PurePursuit::distanceIJ(int from_i , int to_i )	//Achtung indices: es muss auch für to_i=from_i+1 gehen, sonst unendliche schleife bei readpathfrom txt;
 {	
@@ -386,7 +322,7 @@ float PurePursuit::distanceIJ(int from_i , int to_i )	//Achtung indices: es muss
 		d += sqrt(	pow(path_.poses[i].pose.position.x - path_.poses[i+1].pose.position.x,2)+
 				pow(path_.poses[i].pose.position.y - path_.poses[i+1].pose.position.y,2)+
 				pow(path_.poses[i].pose.position.z - path_.poses[i+1].pose.position.z,2));
-		if((i+1)>n_poses_path_-1){std::cout<<"!!!!!!!!LAUFZEITFEHLER::distanceIJ!!!!!!!!!!!"<<std::endl;}
+		if((i+1)>n_poses_path_-1){std::cout<<"PURE PURSUIT: LAUFZEITFEHLER distanceIJ"<<std::endl;}
 	}
 	return d;
 
@@ -403,22 +339,17 @@ float PurePursuit::curveRadius(int j)
 		int i=j;
 		int n_front=indexOfDistanceFront(i-1,D);
 		int n_back=indexOfDistanceBack(i-1,D);
-		std::cout<<"Central Index: "<<i<<std::endl<<"Front Index: "<<n_front<<std::endl<<"Back Index: "<<n_back<<std::endl;
 		if(n_back<=0)
 		{
 			i=indexOfDistanceFront(0,D);
 			n_front=indexOfDistanceFront(i-1,D);
 			n_back=indexOfDistanceBack(i-1,D);
-			std::cout<<"Hintere Grenze"<<std::endl;
-		std::cout<<"New Central Index: "<<i<<std::endl<<"New Front Index: "<<n_front<<std::endl<<"New Back Index: "<<n_back<<std::endl;
 		}
 		else if(n_front>=n_poses_path_-1)
 		{
 			i=indexOfDistanceBack(n_poses_path_-1,D);
 			n_front=indexOfDistanceFront(i-1,D);
 			n_back=indexOfDistanceBack(i-1,D);
-			std::cout<<"Vordere Grenze"<<std::endl;
-		std::cout<<"New Central Index: "<<i<<std::endl<<"New Front Index: "<<n_front<<std::endl<<"New Back Index: "<<n_back<<std::endl;
 		}
 
 		Eigen::Vector3d i_back(		path_.poses[n_back].pose.position.x-path_.poses[i].pose.position.x,
@@ -431,15 +362,12 @@ float PurePursuit::curveRadius(int j)
 							path_.poses[n_front].pose.position.y-path_.poses[n_back].pose.position.y,
 							path_.poses[n_front].pose.position.z-path_.poses[n_back].pose.position.z);
 		if((n_back>n_poses_path_-1)&&(n_front>n_poses_path_-1)&&(i>n_poses_path_-1))
-			{std::cout<<"!!!!!!!!LAUFZEITFEHLER::curveRadius!!!!!!!!!!!"<<std::endl;}
+			{std::cout<<"PURE PURSUIT: LAUFZEITFEHLER curve radius"<<std::endl;}
 		float zaehler =i_back.dot(-i_front);
 		float nenner = (i_back.norm()*i_front.norm());
-		std::cout<<"argument: "<<zaehler/nenner<<std::endl;
-		float gamma=acos(zaehler/nenner);//winkel zwischen Vektoren 
-		std::cout<<"winkel: "<<gamma<<std::endl;
+		float gamma=acos(zaehler/nenner);//winkel zwischen Vektoren
 		if(sin(gamma)==0) 
 		{
-			std::cout<<"straight!"<<std::endl;
 			r_sum+=9999999;		//irgendeine grosse zahl um nicht nan zu erzeugen in nächster zeile
 		}
 		else
@@ -447,7 +375,6 @@ float PurePursuit::curveRadius(int j)
 		r_sum+=back_front.norm()/(2*sin(gamma));	//Gleichung umkreis
 		}
 	}
-	std::cout<<"Count= "<<count<<std::endl<<"r_sum= "<<r_sum<<std::endl;
 	float r=r_sum/count;
 	pure_pursuit_gui_msg_.data[5]=r;
 	return r;
@@ -462,10 +389,9 @@ int PurePursuit::indexOfDistanceFront(int i, float d)
 		l += sqrt(	pow(path_.poses[j+1].pose.position.x - path_.poses[j].pose.position.x,2)+
 				pow(path_.poses[j+1].pose.position.y - path_.poses[j].pose.position.y,2)+
 				pow(path_.poses[j+1].pose.position.z - path_.poses[j].pose.position.z,2));
-		if(j+1>n_poses_path_-1){std::cout<<"!!!!!!!!LAUFZEITFEHLER::indexOfDistanceFront!!!!!!!!!!!"<<std::endl;}
+		if(j+1>n_poses_path_-1){std::cout<<"PURE PURSUIT: LAUFZEITFEHLER::indexOfDistanceFront"<<std::endl;}
 		j ++;
 	}
-	std::cout<<"effective front distance= "<<l<<std::endl;
 	return j+1;
 }
 
@@ -478,10 +404,9 @@ int PurePursuit::indexOfDistanceBack(int i, float d)
 		l += sqrt(	pow(path_.poses[j-1].pose.position.x - path_.poses[j].pose.position.x,2)+
 				pow(path_.poses[j-1].pose.position.y - path_.poses[j].pose.position.y,2)+
 				pow(path_.poses[j-1].pose.position.z - path_.poses[j].pose.position.z,2));
-		if(j>n_poses_path_-1){std::cout<<"!!!!!!!!LAUFZEITFEHLER::indexOfDistanceBack!!!!!!!!!!!"<<std::endl;}
+		if(j>n_poses_path_-1){std::cout<<"PURE PURSUIT: LAUFZEITFEHLER indexOfDistanceBack"<<std::endl;}
 		j --;
 	}
-	std::cout<<"effective back distance= "<<l<<std::endl;
 	return j;
 }
 // Method which returns the current state.
