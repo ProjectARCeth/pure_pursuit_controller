@@ -1,21 +1,21 @@
 #include "../include/pure_pursuit_controller/pure_pursuit_controller.hpp"
 //Parameters
-float K1_LAD_S=0.5;
-float K2_LAD_S=3;
-float K1_LAD_V=0.5;
-float K2_LAD_V=3;
-float MU_HAFT=0.8; // = 0.8 ungefähr
-float G_EARTH=9.81;
-float MAX_LATERAL_ACCELERATION_EROD=MU_HAFT*G_EARTH;
-float MAX_ABSOLUTE_VELOCITY=30;
-float WHEEL_BASE=3;
-float C_VEL=1;  //[0,1]
-float SLOW_DOWN_DISTANCE=10; 
-float V_FREEDOM=20;
-float SHUT_DOWN_TIME=5;
-std::string FILE_LOCATION_PATH_TXT="/home/moritz/.ros/Paths/current_path_HG.txt";
-float N_INTERPOLATION=100;
-float D_INTERPOLATION=3;
+float K1_LAD_S;
+float K2_LAD_S;
+float K1_LAD_V;
+float K2_LAD_V;
+float MU_HAFT; // = 0.8 ungefähr
+float G_EARTH;
+float MAX_LATERAL_ACCELERATION;
+float MAX_ABSOLUTE_VELOCITY;
+float DISTANCE_WHEEL_AXES;
+float FOS_VELOCITY;  //[0,1]
+float SLOW_DOWN_DISTANCE; 
+float V_FREEDOM;
+float SHUT_DOWN_TIME;
+std::string FILE_LOCATION_PATH_TXT="/home/moritz/.ros/Paths/Berg_rauf.txt";
+float D_INTERPOLATION;
+float CRITICAL_OBSTACLE_DISTANCE;
 
 // Constructors and Destructors.
 // Default Constructor.
@@ -23,16 +23,31 @@ PurePursuit::PurePursuit(){}
 // Individual Constructor.
 PurePursuit::PurePursuit(ros::NodeHandle* n)
 {	
+
+	
+	n->getParam("/general/K1_LAD_S", K1_LAD_S);
+	n->getParam("/general/K2_LAD_S", K2_LAD_S);
+	n->getParam("/general/K1_LAD_V", K1_LAD_V);
+	n->getParam("/general/K2_LAD_V", K2_LAD_V);
+	n->getParam("/erod/MU_HAFT",MU_HAFT);
+	n->getParam("/erod/G_EARTH",G_EARTH);
+	n->getParam("/erod/MAX_LATERAL_ACCELERATION",MAX_LATERAL_ACCELERATION);
+	n->getParam("/safety/MAX_ABSOLUTE_VELOCITY",MAX_ABSOLUTE_VELOCITY);
+	n->getParam("/erod/DISTANCE_WHEEL_AXES",DISTANCE_WHEEL_AXES);
+	n->getParam("/safety/FOS_VELOCITY",FOS_VELOCITY);
+	n->getParam("/general/SLOW_DOWN_DISTANCE",SLOW_DOWN_DISTANCE);
+	n->getParam("/general/V_FREEDOM",V_FREEDOM);
+	n->getParam("/general/SHUT_DOWN_TIME",SHUT_DOWN_TIME );
+	//n->getParam("/files/LAST_PATH_FILENAME",);
+	n->getParam("/general/D_INTERPOLATION",D_INTERPOLATION );
+	n->getParam("/safety/CRITICAL_OBSTACLE_DISTANCE",CRITICAL_OBSTACLE_DISTANCE );
+
 	// 1. Save the arguments to member variables.
 	// Set the nodehandle.
 	n_ = n;
 	// 2. Initialize some member variables.
 	// Read in the text file where the teach path is saved and store it to a member variable of type nav_msgs/Path.
 	readPathFromTxt(FILE_LOCATION_PATH_TXT);
-	// Not needed if L&M sends us the current_arrayposition
-	state_.current_arrayposition = 0;
-	// The current array position which won't be overwritten by the incoming state.
-	global_ = 0;
 	// Initialize gui_stop;
 	gui_stop_=0;
 	//Initialize obstacle distance in case it is not the first callback function running
@@ -52,6 +67,7 @@ PurePursuit::PurePursuit(ros::NodeHandle* n)
 	gui_stop_sub_=n_->subscribe("/shut_down",10,&PurePursuit::guiStopCallback,this);
 	// Construction succesful.
 	std::cout << std::endl << "PURE PURSUIT: Consturctor with path lenght: " <<n_poses_path_<< " and slow_down_index: "<<slow_down_index_<<std::endl;
+	
 
 }	
 // Default destructor.
@@ -62,10 +78,7 @@ void PurePursuit::stateCallback(const arc_msgs::State::ConstPtr& incoming_state)
 {	
 	// Save the incoming state (from subscriber) to a member variable.
 	state_ = *incoming_state;
-	//Save absolute velocity for simplicity
-	v_abs_=sqrt(pow(state_.pose_diff.twist.linear.x,2) +
-			pow(state_.pose_diff.twist.linear.y,2)
-			+pow(state_.pose_diff.twist.linear.z,2));
+	v_abs_=incoming_state->pose_diff;
 	float x_path = path_.poses[state_.current_arrayposition].pose.position.x;
 	float y_path = path_.poses[state_.current_arrayposition].pose.position.y;
 	float z_path = path_.poses[state_.current_arrayposition].pose.position.z;
@@ -113,55 +126,22 @@ void PurePursuit::calculateSteer()
 	// The deviation angle between direction of chassis to direction rearaxle<-->LAD_onPath.
 	float theta1;
 	// The current speed.
-	//float v_abs = sqrt(pow(state_.pose_diff.twist.linear.x,2) + pow(state_.pose_diff.twist.linear.y,2));
 	// Empirical linear function to determine the look-ahead-distance.
 	float lad = K2_LAD_S + K1_LAD_S*v_abs_;
-	// Get the index of the nearest point.
-/*
-	state_.current_arrayposition = nearestPoint();
-*/
 	int i=indexOfDistanceFront(state_.current_arrayposition,lad);
 	float alpha=0;
-	if(i<n_poses_path_-1)
-	{	
-//		float dy = path_.poses[i].pose.position.y - (state_.pose.pose.position.y);
-//		float dx = path_.poses[i].pose.position.x - (state_.pose.pose.position.x);
-//		theta1 = atan2(dy,dx);
-	}
-	else
-	{
-
-
-		i=n_poses_path_-1;
-//		float dy = path_.poses[n_poses_path_-1].pose.position.y - (state_.pose.pose.position.y);
-//		float dx = path_.poses[n_poses_path_-1].pose.position.x - (state_.pose.pose.position.x);
-//		theta1 = atan2(dy,dx);
-
-	}
+	if(i>=n_poses_path_-1) i=n_poses_path_-1;
 	float l=distanceIJ(state_.current_arrayposition,i);
 	pure_pursuit_gui_msg_.data[2]=i;
 	geometry_msgs::Point referenz_local=arc_tools::globalToLocal(path_.poses[i].pose.position, state_);
 	float dy = referenz_local.y;
 	float dx = referenz_local.x;
 	alpha = atan2(dy,dx);
-	
-	// Transformation quaternion to euler angles.
-	float ox = state_.pose.pose.orientation.x;
-	float oy = state_.pose.pose.orientation.y;
-	float oz = state_.pose.pose.orientation.z;
-	float ow = state_.pose.pose.orientation.w;
-	const Eigen::Vector4d quat(ox, oy, oz, ow);
-	geometry_msgs::Vector3 eul;
-	eul = arc_tools::transformEulerQuaternionMsg(quat);
-
-//	float theta2 = -eul.z;
-//	float alpha = theta1 - theta2;
-	// Pure Pursuit Controller Formula.
-	u_.steering_angle = atan2(2*WHEEL_BASE*sin(alpha),l);
+	u_.steering_angle = atan2(2*DISTANCE_WHEEL_AXES*sin(alpha),l);
 	pure_pursuit_gui_msg_.data[3]=u_.steering_angle;
 }
 // Method which calculates the ideal speed, using the self-derived empirical formula.
-void PurePursuit::calculateVel()	//""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+void PurePursuit::calculateVel()
 {
     //First calculate optimal velocity
 	//for the moment take curvature at fix distance lad_v
@@ -171,13 +151,12 @@ void PurePursuit::calculateVel()	//"""""""""""""""""""""""""""""""""""""""""""""
 	if(i>=n_poses_path_) i=n_poses_path_-1;
 
 	pure_pursuit_gui_msg_.data[4]=i;
-	float v_limit=sqrt(MAX_LATERAL_ACCELERATION_EROD*curveRadius(i));		//Physik stimmt?
+	float v_limit=sqrt(MAX_LATERAL_ACCELERATION*curveRadius(i));		//Physik stimmt?
 	pure_pursuit_gui_msg_.data[6]=v_limit;
     //Penalisations
-	float C=C_VEL;
+	float C=FOS_VELOCITY;
 	//penalize lateral error from paht, half for 1m error
 	C=C/(1+abs(tracking_error_));
-std::cout<<"lateral error "<<C<<std::endl;
 	//Obstacle distance
 	float brake_dist=pow(v_abs_*3.6/10,2)/2;	//Physikalisch Sinn??
 	pure_pursuit_gui_msg_.data[7]=brake_dist;
@@ -194,6 +173,10 @@ std::cout<<"lateral error "<<C<<std::endl;
 	else if (obstacle_distance_<=brake_dist)
 	{
 		//std::cout<<"Case3"<<std::endl;
+		C=0;
+	}
+	if(obstacle_distance_<CRITICAL_OBSTACLE_DISTANCE)
+	{
 		C=0;
 	}
 
@@ -241,7 +224,7 @@ std::cout<<"lateral error "<<C<<std::endl;
 	u_.speed=v_ref;
 	pure_pursuit_gui_msg_.data[9]=u_.speed;
 	u_.acceleration=v_abs_;
-}//"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+}
 // Method which publishes the calculated commands onto the topic to the system engineers interface node.
 void PurePursuit::publishU()
 {
@@ -282,7 +265,9 @@ void PurePursuit::readPathFromTxt(std::string inFileName)
 	while(!stream.eof() && i<length)
 	{
 		geometry_msgs::PoseStamped temp_pose;
+		float temp_diff;
 		path_.poses.push_back(temp_pose);
+		teach_vel_.push_back(temp_diff);
 		path_diff_.poses.push_back(temp_pose);
 		stream>>j;
 		stream>>path_.poses[j-1].pose.position.x;
@@ -294,13 +279,12 @@ void PurePursuit::readPathFromTxt(std::string inFileName)
 		stream>>path_.poses[j-1].pose.orientation.z;
 		stream>>path_.poses[j-1].pose.orientation.w;
 		//Save teach_velocity
-		stream>>path_diff_.poses[j-1].pose.position.x;
-		stream>>path_diff_.poses[j-1].pose.position.y;
-		stream>>path_diff_.poses[j-1].pose.position.z;
+		stream>>teach_vel_[j-1];//path_diff_.poses[j-1].pose.position.x;
+						//stream>>path_diff_.poses[j-1].pose.position.y;
+						//stream>>path_diff_.poses[j-1].pose.position.z;
 
 		stream.ignore (300, '|');
 		i++;
-		if(j-1>n_poses_path_-1){std::cout<<"PURE PURSUIT: readPathFromTxt"<<std::endl;}
 	}
 	n_poses_path_ = i;
 	float l_dumb=0;
@@ -368,11 +352,11 @@ float PurePursuit::curveRadius(int j)
 		float gamma=acos(zaehler/nenner);//winkel zwischen Vektoren
 		if(sin(gamma)==0) 
 		{
-			r_sum+=9999999;		//irgendeine grosse zahl um nicht nan zu erzeugen in nächster zeile
+			r_sum+=9999999;		//irgendeine grosse Zahl um nicht nan zu erzeugen in nächster zeile
 		}
 		else
 		{
-		r_sum+=back_front.norm()/(2*sin(gamma));	//Gleichung umkreis
+			r_sum+=back_front.norm()/(2*sin(gamma));	//Gleichung umkreis
 		}
 	}
 	float r=r_sum/count;

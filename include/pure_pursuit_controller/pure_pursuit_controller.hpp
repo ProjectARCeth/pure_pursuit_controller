@@ -76,6 +76,7 @@ private:
 	// Saves the path which will be read out from the text file on path_diff the velocities.
 	nav_msgs::Path path_;
 	nav_msgs::Path path_diff_;
+	std::vector<float> teach_vel_;
 	// Number of path points.
 	int n_poses_path_;
 	int slow_down_index_;
