@@ -14,8 +14,15 @@ float SLOW_DOWN_DISTANCE;
 float V_FREEDOM;
 float SHUT_DOWN_TIME;
 std::string FILE_LOCATION_PATH_TXT="/home/moritz/.ros/Paths/Berg_rauf.txt";
-float D_INTERPOLATION;
+float DISTANCE_INTERPOLATION;
 float CRITICAL_OBSTACLE_DISTANCE;
+int QUEUE_LENGTH;
+std::string STELLGROESSEN_TOPIC;
+std::string TRACKING_ERROR_TOPIC;
+std::string NAVIGATION_INFO_TOPIC;
+std::string STATE_TOPIC;
+std::string OBSTACLE_DISTANCE_TOPIC;
+std::string SHUTDOWN_TOPIC;
 
 // Constructors and Destructors.
 // Default Constructor.
@@ -39,8 +46,15 @@ PurePursuit::PurePursuit(ros::NodeHandle* n)
 	n->getParam("/general/V_FREEDOM",V_FREEDOM);
 	n->getParam("/general/SHUT_DOWN_TIME",SHUT_DOWN_TIME );
 	//n->getParam("/files/LAST_PATH_FILENAME",);
-	n->getParam("/general/D_INTERPOLATION",D_INTERPOLATION );
+	n->getParam("/controler/DISTANCE_INTERPOLATION",DISTANCE_INTERPOLATION );
 	n->getParam("/safety/CRITICAL_OBSTACLE_DISTANCE",CRITICAL_OBSTACLE_DISTANCE );
+	n->getParam("/general/QUEUE_LENGTH",QUEUE_LENGTH );
+	n->getParam("/topic/STELLGROESSEN",STELLGROESSEN_TOPIC);
+	n->getParam("/topic/TRACKING_ERROR",TRACKING_ERROR_TOPIC);
+	n->getParam("/topic/NAVIGATION_INFO",NAVIGATION_INFO_TOPIC);
+	n->getParam("/topic/STATE",STATE_TOPIC);
+	n->getParam("/topic/OBSTACLE_DISTANCE",OBSTACLE_DISTANCE_TOPIC);
+	n->getParam("/topic/SHUTDOWN",SHUTDOWN_TOPIC);
 
 	// 1. Save the arguments to member variables.
 	// Set the nodehandle.
@@ -57,14 +71,14 @@ PurePursuit::PurePursuit(ros::NodeHandle* n)
 	// 3. ROS specific setups.
 	// Publisher.
 	// Publishes the control commands to the interface node (TO VCU).
-	pub_stellgroessen_ = n_->advertise<ackermann_msgs::AckermannDrive>("/stellgroessen", 10);
+	pub_stellgroessen_ = n_->advertise<ackermann_msgs::AckermannDrive>(STELLGROESSEN_TOPIC, QUEUE_LENGTH);
 	// Publishes the track error. Can be used to test the accuracy of the controller.
-	track_error_pub_ = n_->advertise<std_msgs::Float64>("/track_error", 10);
-	gui_pub_ = n_->advertise<std_msgs::Float32MultiArray>("/pure_pursuit_info", 10);
+	track_error_pub_ = n_->advertise<std_msgs::Float64>(TRACKING_ERROR_TOPIC, QUEUE_LENGTH);
+	gui_pub_ = n_->advertise<std_msgs::Float32MultiArray>(NAVIGATION_INFO_TOPIC, QUEUE_LENGTH);
 	// Subscriber.
-	sub_state_ = n_->subscribe("/state", 10, &PurePursuit::stateCallback,this);
-	distance_to_obstacle_sub_=n_->subscribe("/distance_to_obstacle",10,&PurePursuit::obstacleCallback,this);
-	gui_stop_sub_=n_->subscribe("/shut_down",10,&PurePursuit::guiStopCallback,this);
+	sub_state_ = n_->subscribe(STATE_TOPIC, QUEUE_LENGTH, &PurePursuit::stateCallback,this);
+	distance_to_obstacle_sub_=n_->subscribe(OBSTACLE_DISTANCE_TOPIC, QUEUE_LENGTH ,&PurePursuit::obstacleCallback,this);
+	gui_stop_sub_=n_->subscribe(SHUTDOWN_TOPIC, QUEUE_LENGTH ,&PurePursuit::guiStopCallback,this);
 	// Construction succesful.
 	std::cout << std::endl << "PURE PURSUIT: Consturctor with path lenght: " <<n_poses_path_<< " and slow_down_index: "<<slow_down_index_<<std::endl;
 	
@@ -319,7 +333,7 @@ float PurePursuit::curveRadius(int j)
 	for(int t=1;t<=3;t++)
 	{	
 		count++;
-		float D=D_INTERPOLATION/t;
+		float D=DISTANCE_INTERPOLATION/t;
 		int i=j;
 		int n_front=indexOfDistanceFront(i-1,D);
 		int n_back=indexOfDistanceBack(i-1,D);
