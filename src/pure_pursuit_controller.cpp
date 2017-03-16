@@ -32,21 +32,21 @@ PurePursuit::PurePursuit(ros::NodeHandle* n)
 {	
 
 	
-	n->getParam("/general/K1_LAD_S", K1_LAD_S);
-	n->getParam("/general/K2_LAD_S", K2_LAD_S);
-	n->getParam("/general/K1_LAD_V", K1_LAD_V);
-	n->getParam("/general/K2_LAD_V", K2_LAD_V);
+	n->getParam("/control/K1_LAD_S", K1_LAD_S);
+	n->getParam("/control/K2_LAD_S", K2_LAD_S);
+	n->getParam("/control/K1_LAD_V", K1_LAD_V);
+	n->getParam("/control/K2_LAD_V", K2_LAD_V);
 	n->getParam("/erod/MU_HAFT",MU_HAFT);
 	n->getParam("/erod/G_EARTH",G_EARTH);
 	n->getParam("/erod/MAX_LATERAL_ACCELERATION",MAX_LATERAL_ACCELERATION);
 	n->getParam("/safety/MAX_ABSOLUTE_VELOCITY",MAX_ABSOLUTE_VELOCITY);
 	n->getParam("/erod/DISTANCE_WHEEL_AXES",DISTANCE_WHEEL_AXES);
 	n->getParam("/safety/FOS_VELOCITY",FOS_VELOCITY);
-	n->getParam("/general/SLOW_DOWN_DISTANCE",SLOW_DOWN_DISTANCE);
-	n->getParam("/general/V_FREEDOM",V_FREEDOM);
-	n->getParam("/general/SHUT_DOWN_TIME",SHUT_DOWN_TIME );
+	n->getParam("/control/SLOW_DOWN_DISTANCE",SLOW_DOWN_DISTANCE);
+	n->getParam("/control/V_FREEDOM",V_FREEDOM);
+	n->getParam("/control/SHUT_DOWN_TIME",SHUT_DOWN_TIME );
 	//n->getParam("/files/LAST_PATH_FILENAME",);
-	n->getParam("/controler/DISTANCE_INTERPOLATION",DISTANCE_INTERPOLATION );
+	n->getParam("/control/DISTANCE_INTERPOLATION",DISTANCE_INTERPOLATION );
 	n->getParam("/safety/CRITICAL_OBSTACLE_DISTANCE",CRITICAL_OBSTACLE_DISTANCE );
 	n->getParam("/general/QUEUE_LENGTH",QUEUE_LENGTH );
 	n->getParam("/topic/STELLGROESSEN",STELLGROESSEN_TOPIC);
