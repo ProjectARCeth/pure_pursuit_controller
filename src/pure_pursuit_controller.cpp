@@ -227,14 +227,11 @@ void PurePursuit::calculateVel()
 		v_ref=MAX_ABSOLUTE_VELOCITY;
 		}
 	//not too divergent from teach part
-	float v_teach=sqrt(	pow(path_diff_.poses[state_.current_arrayposition].pose.position.x,2) +
-					pow(path_diff_.poses[state_.current_arrayposition].pose.position.y,2) +
-					pow(path_diff_.poses[state_.current_arrayposition].pose.position.z,2));
-	pure_pursuit_gui_msg_.data[8]=v_teach+V_FREEDOM;
-	if(v_ref>v_teach+V_FREEDOM)
+	pure_pursuit_gui_msg_.data[8]=teach_vel_[state_.current_arrayposition-1]+V_FREEDOM;
+	if(v_ref>teach_vel_[state_.current_arrayposition-1]+V_FREEDOM)
 		{
 		std::cout<<"PURE PURSUIT: Too divergent from teach velocity" <<std::endl;
-		v_ref=v_teach+V_FREEDOM;
+		v_ref=teach_vel_[state_.current_arrayposition-1]+V_FREEDOM;
 		}
 
 	//Speichern auf Stellgrössen
