@@ -7,8 +7,13 @@ int main(int argc, char **argv)
 	ros::NodeHandle n;
 
 	// Create a PP-controller object.
-	PurePursuit PP(&n);
-
+	PurePursuit PP(&n,*(argv + 1));
+	ros::Rate r(10); // 10 hz
+	while (ros::ok())
+	{
+	ros::spinOnce();
+	r.sleep();
+	}
 	// Start the callback functions.
 	ros::spin();
 	return 0;

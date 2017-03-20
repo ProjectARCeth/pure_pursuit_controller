@@ -8,12 +8,12 @@ float MU_HAFT; // = 0.8 ungefähr
 float G_EARTH;
 float MAX_LATERAL_ACCELERATION;
 float MAX_ABSOLUTE_VELOCITY;
-float DISTANCE_WHEEL_AXES;
+float DISTANCE_WHEEL_AXIS;
 float FOS_VELOCITY;  //[0,1]
 float SLOW_DOWN_DISTANCE; 
 float V_FREEDOM;
 float SHUT_DOWN_TIME;
-std::string FILE_LOCATION_PATH_TXT="/home/moritz/.ros/Paths/Berg_rauf.txt";
+std::string FILE_LOCATION_PATH_TXT="/home/moritz/.ros/Paths/Obstacles_Hoengg_teach2.txt";
 float DISTANCE_INTERPOLATION;
 float CRITICAL_OBSTACLE_DISTANCE;
 int QUEUE_LENGTH;
@@ -23,12 +23,13 @@ std::string NAVIGATION_INFO_TOPIC;
 std::string STATE_TOPIC;
 std::string OBSTACLE_DISTANCE_TOPIC;
 std::string SHUTDOWN_TOPIC;
+std::string PATH_NAME_EDITED;
 
 // Constructors and Destructors.
 // Default Constructor.
 PurePursuit::PurePursuit(){}
 // Individual Constructor.
-PurePursuit::PurePursuit(ros::NodeHandle* n)
+PurePursuit::PurePursuit(ros::NodeHandle* n, std::string PATH_NAME )
 {	
 
 	
@@ -40,7 +41,7 @@ PurePursuit::PurePursuit(ros::NodeHandle* n)
 	n->getParam("/erod/G_EARTH",G_EARTH);
 	n->getParam("/erod/MAX_LATERAL_ACCELERATION",MAX_LATERAL_ACCELERATION);
 	n->getParam("/safety/MAX_ABSOLUTE_VELOCITY",MAX_ABSOLUTE_VELOCITY);
-	n->getParam("/erod/DISTANCE_WHEEL_AXES",DISTANCE_WHEEL_AXES);
+	n->getParam("/erod/DISTANCE_WHEEL_AXIS",DISTANCE_WHEEL_AXIS);
 	n->getParam("/safety/FOS_VELOCITY",FOS_VELOCITY);
 	n->getParam("/control/SLOW_DOWN_DISTANCE",SLOW_DOWN_DISTANCE);
 	n->getParam("/control/V_FREEDOM",V_FREEDOM);
@@ -49,12 +50,14 @@ PurePursuit::PurePursuit(ros::NodeHandle* n)
 	n->getParam("/control/DISTANCE_INTERPOLATION",DISTANCE_INTERPOLATION );
 	n->getParam("/safety/CRITICAL_OBSTACLE_DISTANCE",CRITICAL_OBSTACLE_DISTANCE );
 	n->getParam("/general/QUEUE_LENGTH",QUEUE_LENGTH );
-	n->getParam("/topic/STELLGROESSEN",STELLGROESSEN_TOPIC);
+	n->getParam("/topic/STELLGROESSEN_SAFE",STELLGROESSEN_TOPIC);
 	n->getParam("/topic/TRACKING_ERROR",TRACKING_ERROR_TOPIC);
 	n->getParam("/topic/NAVIGATION_INFO",NAVIGATION_INFO_TOPIC);
 	n->getParam("/topic/STATE",STATE_TOPIC);
 	n->getParam("/topic/OBSTACLE_DISTANCE",OBSTACLE_DISTANCE_TOPIC);
 	n->getParam("/topic/SHUTDOWN",SHUTDOWN_TOPIC);
+
+	PATH_NAME_EDITED = PATH_NAME+"_teach_edited.txt";
 
 	// 1. Save the arguments to member variables.
 	// Set the nodehandle.
@@ -151,7 +154,7 @@ void PurePursuit::calculateSteer()
 	float dy = referenz_local.y;
 	float dx = referenz_local.x;
 	alpha = atan2(dy,dx);
-	u_.steering_angle = atan2(2*DISTANCE_WHEEL_AXES*sin(alpha),l);
+	u_.steering_angle = atan2(2*DISTANCE_WHEEL_AXIS*sin(alpha),l);
 	pure_pursuit_gui_msg_.data[3]=u_.steering_angle;
 }
 // Method which calculates the ideal speed, using the self-derived empirical formula.

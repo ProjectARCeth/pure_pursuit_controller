@@ -25,7 +25,7 @@ public:
 	// Default constructor.
 	PurePursuit();
 	// Individual constructor which takes the node handle and the LAD tuning-knob as arguments.
-	PurePursuit(ros::NodeHandle* n);
+	PurePursuit(ros::NodeHandle* n, std::string PATH_NAME);
 	// Default destructor.
 	~PurePursuit();
 
