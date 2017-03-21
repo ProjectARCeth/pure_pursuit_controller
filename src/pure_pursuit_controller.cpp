@@ -13,7 +13,7 @@ float FOS_VELOCITY;  //[0,1]
 float SLOW_DOWN_DISTANCE; 
 float V_FREEDOM;
 float SHUT_DOWN_TIME;
-std::string FILE_LOCATION_PATH_TXT="/home/moritz/.ros/Paths/Obstacles_Hoengg_teach2.txt";
+//std::string FILE_LOCATION_PATH_TXT="/home/moritz/.ros/Paths/Obstacles_Hoengg_teach2.txt";
 float DISTANCE_INTERPOLATION;
 float CRITICAL_OBSTACLE_DISTANCE;
 int QUEUE_LENGTH;
@@ -57,14 +57,14 @@ PurePursuit::PurePursuit(ros::NodeHandle* n, std::string PATH_NAME )
 	n->getParam("/topic/OBSTACLE_DISTANCE",OBSTACLE_DISTANCE_TOPIC);
 	n->getParam("/topic/SHUTDOWN",SHUTDOWN_TOPIC);
 
-	PATH_NAME_EDITED = PATH_NAME+"_teach_edited.txt";
+	PATH_NAME_EDITED = "/home/arcsystem/paths/First_teach.txt";//PATH_NAME+"_teach_edited.txt";
 
 	// 1. Save the arguments to member variables.
 	// Set the nodehandle.
 	n_ = n;
 	// 2. Initialize some member variables.
 	// Read in the text file where the teach path is saved and store it to a member variable of type nav_msgs/Path.
-	readPathFromTxt(FILE_LOCATION_PATH_TXT);
+	readPathFromTxt(PATH_NAME_EDITED);
 	// Initialize gui_stop;
 	gui_stop_=0;
 	//Initialize obstacle distance in case it is not the first callback function running
