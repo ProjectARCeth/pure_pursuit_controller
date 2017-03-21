@@ -50,7 +50,7 @@ PurePursuit::PurePursuit(ros::NodeHandle* n, std::string PATH_NAME )
 	n->getParam("/control/DISTANCE_INTERPOLATION",DISTANCE_INTERPOLATION );
 	n->getParam("/safety/CRITICAL_OBSTACLE_DISTANCE",CRITICAL_OBSTACLE_DISTANCE );
 	n->getParam("/general/QUEUE_LENGTH",QUEUE_LENGTH );
-	n->getParam("/topic/STELLGROESSEN_SAFE",STELLGROESSEN_TOPIC);
+	n->getParam("/topic/STELLGROESSEN",STELLGROESSEN_TOPIC);
 	n->getParam("/topic/TRACKING_ERROR",TRACKING_ERROR_TOPIC);
 	n->getParam("/topic/NAVIGATION_INFO",NAVIGATION_INFO_TOPIC);
 	n->getParam("/topic/STATE",STATE_TOPIC);
