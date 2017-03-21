@@ -1,13 +1,16 @@
 #include "../include/pure_pursuit_controller/pure_pursuit_controller.hpp"
 
+#include <iostream>
+#include <string> 
+
 int main(int argc, char **argv)
 	{
 	// Create the high-level controller node.
 	ros::init(argc, argv, "high_level_controller");
 	ros::NodeHandle n;
-
+	std::string Path_Name = *(argv + 1);
 	// Create a PP-controller object.
-	PurePursuit PP(&n,*(argv + 1));
+	PurePursuit PP(&n,Path_Name);
 	ros::Rate r(10); // 10 hz
 	while (ros::ok())
 	{
