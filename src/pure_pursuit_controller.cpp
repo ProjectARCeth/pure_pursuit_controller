@@ -56,9 +56,8 @@ PurePursuit::PurePursuit(ros::NodeHandle* n, std::string PATH_NAME )
 	n->getParam("/topic/STATE",STATE_TOPIC);
 	n->getParam("/topic/OBSTACLE_DISTANCE",OBSTACLE_DISTANCE_TOPIC);
 	n->getParam("/topic/SHUTDOWN",SHUTDOWN_TOPIC);
-
-	PATH_NAME_EDITED = PATH_NAME+"_teach_edited.txt";//"/home/arcsystem/paths/First_teach.txt";
-
+	// PATH_NAME_EDITED = PATH_NAME+"_teach_edited.txt";
+	PATH_NAME_EDITED = "/home/arcsystem/paths/test_teach.txt";
 	// 1. Save the arguments to member variables.
 	// Set the nodehandle.
 	n_ = n;
