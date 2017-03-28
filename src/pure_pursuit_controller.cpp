@@ -11,6 +11,7 @@ float MAX_ABSOLUTE_VELOCITY;
 float DISTANCE_WHEEL_AXIS;
 float FOS_VELOCITY;  //[0,1]
 float SLOW_DOWN_DISTANCE; 
+float SLOW_DOWN_PUFFER;
 float V_FREEDOM;
 float SHUT_DOWN_TIME;
 //std::string FILE_LOCATION_PATH_TXT="/home/moritz/.ros/Paths/Obstacles_Hoengg_teach2.txt";
@@ -44,9 +45,9 @@ PurePursuit::PurePursuit(ros::NodeHandle* n, std::string PATH_NAME )
 	n->getParam("/erod/DISTANCE_WHEEL_AXIS",DISTANCE_WHEEL_AXIS);
 	n->getParam("/safety/FOS_VELOCITY",FOS_VELOCITY);
 	n->getParam("/control/SLOW_DOWN_DISTANCE",SLOW_DOWN_DISTANCE);
+	n->getParam("/control/SLOW_DOWN_PUFFER",SLOW_DOWN_PUFFER);
 	n->getParam("/control/V_FREEDOM",V_FREEDOM);
 	n->getParam("/control/SHUT_DOWN_TIME",SHUT_DOWN_TIME );
-	//n->getParam("/files/LAST_PATH_FILENAME",);
 	n->getParam("/control/DISTANCE_INTERPOLATION",DISTANCE_INTERPOLATION );
 	n->getParam("/safety/CRITICAL_OBSTACLE_DISTANCE",CRITICAL_OBSTACLE_DISTANCE );
 	n->getParam("/general/QUEUE_LENGTH",QUEUE_LENGTH );
@@ -56,8 +57,8 @@ PurePursuit::PurePursuit(ros::NodeHandle* n, std::string PATH_NAME )
 	n->getParam("/topic/STATE",STATE_TOPIC);
 	n->getParam("/topic/OBSTACLE_DISTANCE",OBSTACLE_DISTANCE_TOPIC);
 	n->getParam("/topic/SHUTDOWN",SHUTDOWN_TOPIC);
-	// PATH_NAME_EDITED = PATH_NAME+"_teach_edited.txt";
-	PATH_NAME_EDITED = "/home/arcsystem/paths/test_teach.txt";
+	PATH_NAME_EDITED = PATH_NAME + "_teach.txt";  //BSP:rosrun pure_pursuit_controller regler_node /home/moritz/.ros/Paths/test
+
 	// 1. Save the arguments to member variables.
 	// Set the nodehandle.
 	n_ = n;
@@ -204,7 +205,7 @@ void PurePursuit::calculateVel()
 		{
 		std::cout<<"PURE PURSUIT: We reached slow_down_index "<<slow_down_index_<<std::endl<<"Distance to end: "<<distanceIJ(state_.current_arrayposition,n_poses_path_-1)<<std::endl;
 		//Lineares herrunterschrauben
-		C=C*(distanceIJ(state_.current_arrayposition,n_poses_path_-1))/(SLOW_DOWN_DISTANCE);
+		C=C*((distanceIJ(state_.current_arrayposition,n_poses_path_-1))-SLOW_DOWN_PUFFER)/(SLOW_DOWN_DISTANCE);
 		}
 	//If shut down action is running
 	if(gui_stop_==1&&BigBen_.getTimeFromStart()<=SHUT_DOWN_TIME)//&& time zwischen 0 und pi/2

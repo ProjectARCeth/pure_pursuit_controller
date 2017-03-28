@@ -8,9 +8,9 @@ int main(int argc, char **argv)
 	// Create the high-level controller node.
 	ros::init(argc, argv, "high_level_controller");
 	ros::NodeHandle n;
-	std::string Path_Name = *(argv + 1);
+	std::string PATH_NAME = *(argv + 1);
 	// Create a PP-controller object.
-	PurePursuit PP(&n,Path_Name);
+	PurePursuit PP(&n,PATH_NAME);
 	ros::Rate r(10); // 10 hz
 	while (ros::ok())
 	{
