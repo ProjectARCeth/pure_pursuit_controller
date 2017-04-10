@@ -17,6 +17,8 @@ float SHUT_DOWN_TIME;
 //std::string FILE_LOCATION_PATH_TXT="/home/moritz/.ros/Paths/Obstacles_Hoengg_teach2.txt";
 float DISTANCE_INTERPOLATION;
 float CRITICAL_OBSTACLE_DISTANCE;
+float UPPERBOUND_LAD_S;
+float LOWERBOUND_LAD_S;
 int QUEUE_LENGTH;
 std::string STELLGROESSEN_TOPIC;
 std::string TRACKING_ERROR_TOPIC;
@@ -36,6 +38,8 @@ PurePursuit::PurePursuit(ros::NodeHandle* n, std::string PATH_NAME )
 	
 	n->getParam("/control/K1_LAD_S", K1_LAD_S);
 	n->getParam("/control/K2_LAD_S", K2_LAD_S);
+	n->getParam("/control/UPPERBOUND_LAD_S", UPPERBOUND_LAD_S);
+	n->getParam("/control/LOWERBOUND_LAD_S", LOWERBOUND_LAD_S);
 	n->getParam("/control/K1_LAD_V", K1_LAD_V);
 	n->getParam("/control/K2_LAD_V", K2_LAD_V);
 	n->getParam("/erod/MU_HAFT",MU_HAFT);
@@ -85,7 +89,9 @@ PurePursuit::PurePursuit(ros::NodeHandle* n, std::string PATH_NAME )
 	// Construction succesful.
 	std::cout << std::endl << "PURE PURSUIT: Consturctor with path lenght: " <<n_poses_path_<< " and slow_down_index: "<<slow_down_index_<<std::endl;
 	
-
+/*
+fir (int i=0; i<n_poses_path_;i++) std::cout<<"Radius at "<<i<<" is "<<curveRadius(i)<<std::endl;
+*/
 }	
 // Default destructor.
 PurePursuit::~PurePursuit(){}
@@ -102,7 +108,8 @@ void PurePursuit::stateCallback(const arc_msgs::State::ConstPtr& incoming_state)
 	float x_now = state_.pose.pose.position.x;
 	float y_now = state_.pose.pose.position.y;
 	float z_now = state_.pose.pose.position.z;
-	tracking_error_ = sqrt(pow((x_now - x_path),2) + pow((y_now - y_path),2) + pow((z_now - z_path),2));
+	tracking_error_ =abs(arc_tools::globalToLocal(path_.poses[state_.current_arrayposition].pose.position, state_).y);
+//	tracking_error_ = sqrt(pow((x_now - x_path),2) + pow((y_now - y_path),2) + pow((z_now - z_path),2));
 	pure_pursuit_gui_msg_.data[0]=distanceIJ(0,state_.current_arrayposition);
 	pure_pursuit_gui_msg_.data[1]=distanceIJ(state_.current_arrayposition,n_poses_path_-1);
 	// Calculate the steering angle using the PurePursuit Controller Formula.
@@ -145,6 +152,8 @@ void PurePursuit::calculateSteer()
 	// The current speed.
 	// Empirical linear function to determine the look-ahead-distance.
 	float lad = K2_LAD_S + K1_LAD_S*v_abs_;
+	lad=std::max(lad,LOWERBOUND_LAD_S);
+	lad=std::min(lad,UPPERBOUND_LAD_S);
 	int i=indexOfDistanceFront(state_.current_arrayposition,lad);
 	float alpha=0;
 	if(i>=n_poses_path_-1) i=n_poses_path_-1;
@@ -153,6 +162,7 @@ void PurePursuit::calculateSteer()
 	geometry_msgs::Point referenz_local=arc_tools::globalToLocal(path_.poses[i].pose.position, state_);
 	float dy = referenz_local.y;
 	float dx = referenz_local.x;
+	std::cout<<"x-local "<<dx<<std::endl<<"y-local "<<dy<<std::endl;
 	alpha = atan2(dy,dx);
 	u_.steering_angle = atan2(2*DISTANCE_WHEEL_AXIS*sin(alpha),l);
 	pure_pursuit_gui_msg_.data[3]=u_.steering_angle;
