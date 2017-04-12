@@ -119,19 +119,19 @@ void PurePursuit::stateCallback(const arc_msgs::State::ConstPtr& incoming_state)
 	// Publish the calculated control commands.
 	this -> publishU();
 	// Display success.
-	std::cout<<"0:Abstand zu Start Pfad "<<pure_pursuit_gui_msg_.data[0]<<std::endl;
-	std::cout<<"1:Abstand zu Ende Pfad "<<pure_pursuit_gui_msg_.data[1]<<std::endl;
-	std::cout<<"2:Referenzindex für steuerung "<<pure_pursuit_gui_msg_.data[2]<<std::endl;
-	std::cout<<"3:Solllenkwinkel "<<pure_pursuit_gui_msg_.data[3]<<std::endl;
-	std::cout<<"4:Referenzindex für radius geschwindigkeit "<<pure_pursuit_gui_msg_.data[4]<<std::endl;
-	std::cout<<"5:Radius Pfad "<<pure_pursuit_gui_msg_.data[5]<<std::endl;
-	std::cout<<"6:Physikalische geschw. Grenze "<<pure_pursuit_gui_msg_.data[6]<<std::endl;
-	std::cout<<"7:Bremsweg "<<pure_pursuit_gui_msg_.data[7]<<std::endl;
-	std::cout<<"8:Upper bound given by teach velocity "<<pure_pursuit_gui_msg_.data[8]<<std::endl;
-	std::cout<<"9:Sollgeschwindigkeit final "<<pure_pursuit_gui_msg_.data[9]<<std::endl;
-	std::cout<<"10: "<<pure_pursuit_gui_msg_.data[10]<<std::endl;
-	std::cout<<std::endl;
-	std::cout<<"SENT COMMAND"<<std::endl;
+	// std::cout<<"0:Abstand zu Start Pfad "<<pure_pursuit_gui_msg_.data[0]<<std::endl;
+	// std::cout<<"1:Abstand zu Ende Pfad "<<pure_pursuit_gui_msg_.data[1]<<std::endl;
+	// std::cout<<"2:Referenzindex für steuerung "<<pure_pursuit_gui_msg_.data[2]<<std::endl;
+	// std::cout<<"3:Solllenkwinkel "<<pure_pursuit_gui_msg_.data[3]<<std::endl;
+	// std::cout<<"4:Referenzindex für radius geschwindigkeit "<<pure_pursuit_gui_msg_.data[4]<<std::endl;
+	// std::cout<<"5:Radius Pfad "<<pure_pursuit_gui_msg_.data[5]<<std::endl;
+	// std::cout<<"6:Physikalische geschw. Grenze "<<pure_pursuit_gui_msg_.data[6]<<std::endl;
+	// std::cout<<"7:Bremsweg "<<pure_pursuit_gui_msg_.data[7]<<std::endl;
+	// std::cout<<"8:Upper bound given by teach velocity "<<pure_pursuit_gui_msg_.data[8]<<std::endl;
+	// std::cout<<"9:Sollgeschwindigkeit final "<<pure_pursuit_gui_msg_.data[9]<<std::endl;
+	// std::cout<<"10: "<<pure_pursuit_gui_msg_.data[10]<<std::endl;
+	// std::cout<<std::endl;
+	// std::cout<<"SENT COMMAND"<<std::endl;
 }
 
 void PurePursuit::guiStopCallback(const std_msgs::Bool::ConstPtr& msg)
@@ -162,7 +162,7 @@ void PurePursuit::calculateSteer()
 	geometry_msgs::Point referenz_local=arc_tools::globalToLocal(path_.poses[i].pose.position, state_);
 	float dy = referenz_local.y;
 	float dx = referenz_local.x;
-	std::cout<<"x-local "<<dx<<std::endl<<"y-local "<<dy<<std::endl;
+	//std::cout<<"x-local "<<dx<<std::endl<<"y-local "<<dy<<std::endl;
 	alpha = atan2(dy,dx);
 	u_.steering_angle = atan2(2*DISTANCE_WHEEL_AXIS*sin(alpha),l);
 	pure_pursuit_gui_msg_.data[3]=u_.steering_angle;
@@ -180,12 +180,27 @@ void PurePursuit::calculateVel()
 	pure_pursuit_gui_msg_.data[4]=i;
 	float v_limit=sqrt(MAX_LATERAL_ACCELERATION*curveRadius(i));		//Physik stimmt?
 	pure_pursuit_gui_msg_.data[6]=v_limit;
+	//Upper buonds
+	//upper limit, HERE 25 m/s;
+	if(v_limit>MAX_ABSOLUTE_VELOCITY)
+		{
+		//std::cout<<"PURE PURSUIT: Upper limit of 25 reached. "<<v_ref<<" is too fast"<<std::endl;
+		v_limit=MAX_ABSOLUTE_VELOCITY;
+		}
+	//not too divergent from teach part
+	pure_pursuit_gui_msg_.data[8]=teach_vel_[state_.current_arrayposition-1]+V_FREEDOM;
+	if(v_limit>teach_vel_[state_.current_arrayposition-1]+V_FREEDOM)
+		{
+		//std::cout<<"PURE PURSUIT: Too divergent from teach velocity" <<std::endl;
+		v_limit=teach_vel_[state_.current_arrayposition-1]+V_FREEDOM;
+		}
     //Penalisations
 	float C=FOS_VELOCITY;
 	//penalize lateral error from paht, half for 1m error
 	C=C/(1+abs(tracking_error_));
 	//Obstacle distance
-	float brake_dist=pow(v_abs_*3.6/10,2)/2;	//Physikalisch Sinn??
+	// float brake_dist=pow(v_abs_*3.6/10,2)/2;	//Physikalisch Sinn??
+	float brake_dist=10.0;
 	pure_pursuit_gui_msg_.data[7]=brake_dist;
 	if((obstacle_distance_>brake_dist)&&(obstacle_distance_<2*brake_dist))
 	{	
@@ -229,20 +244,7 @@ void PurePursuit::calculateVel()
 		C=0;
 		}
 	float v_ref=v_limit*C;
-//Upper buonds
-	//upper limit, HERE 25 m/s;
-	if(v_ref>MAX_ABSOLUTE_VELOCITY)
-		{
-		std::cout<<"PURE PURSUIT: Upper limit of 25 reached. "<<v_ref<<" is too fast"<<std::endl;
-		v_ref=MAX_ABSOLUTE_VELOCITY;
-		}
-	//not too divergent from teach part
-	pure_pursuit_gui_msg_.data[8]=teach_vel_[state_.current_arrayposition-1]+V_FREEDOM;
-	if(v_ref>teach_vel_[state_.current_arrayposition-1]+V_FREEDOM)
-		{
-		std::cout<<"PURE PURSUIT: Too divergent from teach velocity" <<std::endl;
-		v_ref=teach_vel_[state_.current_arrayposition-1]+V_FREEDOM;
-		}
+
 
 	//Speichern auf Stellgrössen
 	u_.speed=v_ref;
