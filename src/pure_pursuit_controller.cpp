@@ -17,6 +17,10 @@ float SHUT_DOWN_TIME;
 //std::string FILE_LOCATION_PATH_TXT="/home/moritz/.ros/Paths/Obstacles_Hoengg_teach2.txt";
 float DISTANCE_INTERPOLATION;
 float CRITICAL_OBSTACLE_DISTANCE;
+
+float OBSTACLE_SLOW_DOWN_DISTANCE;
+float OBSTACLE_PUFFER_DISTANCE;
+
 float UPPERBOUND_LAD_S;
 float LOWERBOUND_LAD_S;
 int QUEUE_LENGTH;
@@ -34,8 +38,8 @@ PurePursuit::PurePursuit(){}
 // Individual Constructor.
 PurePursuit::PurePursuit(ros::NodeHandle* n, std::string PATH_NAME )
 {	
-
-	
+	n->getParam("/control/OBSTACLE_SLOW_DOWN_DISTANCE",OBSTACLE_SLOW_DOWN_DISTANCE);
+	n->getParam("/control/OBSTACLE_PUFFER_DISTANCE",OBSTACLE_PUFFER_DISTANCE);
 	n->getParam("/control/K1_LAD_S", K1_LAD_S);
 	n->getParam("/control/K2_LAD_S", K2_LAD_S);
 	n->getParam("/control/UPPERBOUND_LAD_S", UPPERBOUND_LAD_S);
@@ -176,29 +180,23 @@ void PurePursuit::calculateVel()
 	//find reference index for curvature
 	int i=indexOfDistanceFront(state_.current_arrayposition, lad_v);
 	if(i>=n_poses_path_) i=n_poses_path_-1;
-
 	pure_pursuit_gui_msg_.data[4]=i;
 	float v_limit=sqrt(MAX_LATERAL_ACCELERATION*curveRadius(i));		//Physik stimmt?
 	pure_pursuit_gui_msg_.data[6]=v_limit;
-	//Upper buonds
-	//upper limit, HERE 25 m/s;
-	if(v_limit>MAX_ABSOLUTE_VELOCITY)
-		{
-		//std::cout<<"PURE PURSUIT: Upper limit of 25 reached. "<<v_ref<<" is too fast"<<std::endl;
-		v_limit=MAX_ABSOLUTE_VELOCITY;
-		}
-	//not too divergent from teach part
+    //Upper buonds
+	float v_bounded=v_limit;
+	//MAX_ABSOLUTE_VELOCITY
+	v_bounded=std::min(v_bounded,MAX_ABSOLUTE_VELOCITY);
+	//TEACH_VELOCITY
 	pure_pursuit_gui_msg_.data[8]=teach_vel_[state_.current_arrayposition-1]+V_FREEDOM;
-	if(v_limit>teach_vel_[state_.current_arrayposition-1]+V_FREEDOM)
-		{
-		//std::cout<<"PURE PURSUIT: Too divergent from teach velocity" <<std::endl;
-		v_limit=teach_vel_[state_.current_arrayposition-1]+V_FREEDOM;
-		}
+	v_bounded=std::min(v_bounded,teach_vel_[state_.current_arrayposition-1]+V_FREEDOM);
     //Penalisations
+	//Static penalisation
 	float C=FOS_VELOCITY;
-	//penalize lateral error from paht, half for 1m error
+	//lateral error, half for 1m error
 	C=C/(1+abs(tracking_error_));
-	//Obstacle distance
+/*	//Obstacle distance
+	
 	// float brake_dist=pow(v_abs_*3.6/10,2)/2;	//Physikalisch Sinn??
 	float brake_dist=10.0;
 	pure_pursuit_gui_msg_.data[7]=brake_dist;
@@ -220,18 +218,18 @@ void PurePursuit::calculateVel()
 	if(obstacle_distance_<CRITICAL_OBSTACLE_DISTANCE)
 	{
 		C=0;
-	}
+	}*/
 
-	//Orientation error not yet implemented
     //Slow down
-	//slow down gradually when arrive at SLOW_DOWN_DISTANCE from end of of path
 
+	//slow down gradually when arrive at SLOW_DOWN_DISTANCE from end of of path
 	if (state_.current_arrayposition>=slow_down_index_)
 		{
-		std::cout<<"PURE PURSUIT: We reached slow_down_index "<<slow_down_index_<<std::endl<<"Distance to end: "<<distanceIJ(state_.current_arrayposition,n_poses_path_-1)<<std::endl;
+		std::cout<<"PURE PURSUIT: Slownig down. Distance to end: "<<distanceIJ(state_.current_arrayposition,n_poses_path_-1)<<std::endl;
 		//Lineares herrunterschrauben
-		C=C*((distanceIJ(state_.current_arrayposition,n_poses_path_-1))-SLOW_DOWN_PUFFER)/(SLOW_DOWN_DISTANCE);
+		C=C*((distanceIJ(state_.current_arrayposition,n_poses_path_-1))-SLOW_DOWN_PUFFER)/(SLOW_DOWN_DISTANCE-SLOW_DOWN_PUFFER);
 		}
+
 	//If shut down action is running
 	if(gui_stop_==1&&BigBen_.getTimeFromStart()<=SHUT_DOWN_TIME)//&& time zwischen 0 und pi/2
 		{
@@ -240,13 +238,18 @@ void PurePursuit::calculateVel()
 		}
 	else if (gui_stop_==1 && BigBen_.getTimeFromStart()>SHUT_DOWN_TIME)
 		{
-		std::cout<<"PURE PURSUIT: Shutted Down"<<std::endl;
+		std::cout<<"PURE PURSUIT: Shutted down"<<std::endl;
 		C=0;
 		}
-	float v_ref=v_limit*C;
 
+	//Slow down beacuse of obstacle
+	if(obstacle_distance_<OBSTACLE_SLOW_DOWN_DISTANCE) std::cout<<OBSTACLE_SLOW_DOWN_DISTANCE<<" PURE PURSUIT; Slow down for obstacle"<<std::endl;
+	obstacle_distance_=std::max(obstacle_distance_,OBSTACLE_PUFFER_DISTANCE);
+	obstacle_distance_=std::min(obstacle_distance_,OBSTACLE_SLOW_DOWN_DISTANCE);
+	C=C * (obstacle_distance_ - OBSTACLE_PUFFER_DISTANCE) / (OBSTACLE_SLOW_DOWN_DISTANCE - OBSTACLE_PUFFER_DISTANCE);
 
-	//Speichern auf Stellgrössen
+	float v_ref = v_bounded * C;
+    //Speichern auf Stellgrössen
 	u_.speed=v_ref;
 	pure_pursuit_gui_msg_.data[9]=u_.speed;
 	u_.acceleration=v_abs_;
