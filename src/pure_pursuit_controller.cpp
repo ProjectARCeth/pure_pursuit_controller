@@ -1,5 +1,7 @@
 #include "../include/pure_pursuit_controller/pure_pursuit_controller.hpp"
 //Parameters
+int PURE_PURSUIT_RATE=10;
+float STEER_PER_SECOND=0.34;
 float K1_LAD_S;
 float K2_LAD_S;
 float K1_LAD_V;
@@ -38,6 +40,8 @@ PurePursuit::PurePursuit(){}
 // Individual Constructor.
 PurePursuit::PurePursuit(ros::NodeHandle* n, std::string PATH_NAME )
 {	
+	n->getParam("/general/PURE_PURSUIT_RATE",PURE_PURSUIT_RATE);
+	n->getParam("/general/STEER_PER_SECOND",STEER_PER_SECOND);
 	n->getParam("/control/OBSTACLE_SLOW_DOWN_DISTANCE",OBSTACLE_SLOW_DOWN_DISTANCE);
 	n->getParam("/control/OBSTACLE_PUFFER_DISTANCE",OBSTACLE_PUFFER_DISTANCE);
 	n->getParam("/control/K1_LAD_S", K1_LAD_S);
@@ -77,6 +81,8 @@ PurePursuit::PurePursuit(ros::NodeHandle* n, std::string PATH_NAME )
 	gui_stop_=0;
 	//Initialize obstacle distance in case it is not the first callback function running
 	obstacle_distance_=100;
+	u_.steering_angle=0;
+	u_.speed=0;
 	pure_pursuit_gui_msg_.data.clear();
 	for(int i=0;i<10;i++) pure_pursuit_gui_msg_.data.push_back(0);
 	// 3. ROS specific setups.
@@ -120,7 +126,7 @@ void PurePursuit::stateCallback(const arc_msgs::State::ConstPtr& incoming_state)
 	// Publish the calculated control commands.
 	this -> publishU();
 	// Display success.
-	 std::cout<<"0:Abstand zu Start Pfad "<<pure_pursuit_gui_msg_.data[0]<<std::endl;
+/*	 std::cout<<"0:Abstand zu Start Pfad "<<pure_pursuit_gui_msg_.data[0]<<std::endl;
 	 std::cout<<"1:Abstand zu Ende Pfad "<<pure_pursuit_gui_msg_.data[1]<<std::endl;
 	 std::cout<<"2:Referenzindex für steuerung "<<pure_pursuit_gui_msg_.data[2]<<std::endl;
 	 std::cout<<"3:Solllenkwinkel "<<pure_pursuit_gui_msg_.data[3]<<std::endl;
@@ -133,6 +139,7 @@ void PurePursuit::stateCallback(const arc_msgs::State::ConstPtr& incoming_state)
 	 std::cout<<"10: "<<pure_pursuit_gui_msg_.data[10]<<std::endl;
 	 std::cout<<std::endl;
 	 std::cout<<"SENT COMMAND"<<std::endl;
+*/
 }
 
 void PurePursuit::guiStopCallback(const std_msgs::Bool::ConstPtr& msg)
@@ -166,7 +173,13 @@ void PurePursuit::calculateSteer()
 	float dx = referenz_local.x;
 	//std::cout<<"x-local "<<dx<<std::endl<<"y-local "<<dy<<std::endl;
 	alpha = atan2(dy,dx);
-	u_.steering_angle = atan2(2*DISTANCE_WHEEL_AXIS*sin(alpha),l);
+
+	float new_steer= atan2(2*DISTANCE_WHEEL_AXIS*sin(alpha),l);
+	float old_steer = u_.steering_angle;
+	float delta_steer=STEER_PER_SECOND/PURE_PURSUIT_RATE;
+	u_.steering_angle= std::min(old_steer+delta_steer,new_steer);
+	u_.steering_angle= std::max(old_steer-delta_steer,u_.steering_angle);
+std::cout<<"Old steer: "<<old_steer<<" Delta steer: "<<delta_steer<<" New wanted steer "<<new_steer<<" Actual bounded final steer: "<<u_.steering_angle<<std::endl;
 	pure_pursuit_gui_msg_.data[3]=u_.steering_angle;
 }
 // Method which calculates the ideal speed, using the self-derived empirical formula.
