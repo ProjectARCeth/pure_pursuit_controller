@@ -10,7 +10,7 @@ float MAX_LATERAL_ACCELERATION;
 float MAX_ABSOLUTE_VELOCITY;
 float DISTANCE_WHEEL_AXIS;
 float FOS_VELOCITY;  //[0,1]
-float SLOW_DOWN_DISTANCE; 
+float SLOW_DOWN_DISTANCE=10; 
 float SLOW_DOWN_PUFFER;
 float V_FREEDOM;
 float SHUT_DOWN_TIME;
@@ -92,9 +92,7 @@ PurePursuit::PurePursuit(ros::NodeHandle* n, std::string PATH_NAME )
 	gui_stop_sub_=n_->subscribe(SHUTDOWN_TOPIC, QUEUE_LENGTH ,&PurePursuit::guiStopCallback,this);
 	// Construction succesful.
 	std::cout << std::endl << "PURE PURSUIT: Consturctor with path lenght: " <<n_poses_path_<< " and slow_down_index: "<<slow_down_index_<<std::endl;
-/*
-fir (int i=0; i<n_poses_path_;i++) std::cout<<"Radius at "<<i<<" is "<<curveRadius(i)<<std::endl;
-*/
+//std::cout<<"index with old "<<indexOfDistanceFront(800,20)<<" index with new "<<indexOfRadiusFront(800,20)<<std::endl;
 }	
 // Default destructor.
 PurePursuit::~PurePursuit(){}
@@ -158,7 +156,7 @@ void PurePursuit::calculateSteer()
 	float lad = K2_LAD_S + K1_LAD_S*v_abs_;
 	lad=std::max(lad,LOWERBOUND_LAD_S);
 	lad=std::min(lad,UPPERBOUND_LAD_S);
-	int i=indexOfDistanceFront(state_.current_arrayposition,lad);
+	int i=indexOfRadiusFront(state_.current_arrayposition,lad);
 	float alpha=0;
 	if(i>=n_poses_path_-1) i=n_poses_path_-1;
 	float l=distanceIJ(state_.current_arrayposition,i);
@@ -178,7 +176,7 @@ void PurePursuit::calculateVel()
 	//for the moment take curvature at fix distance lad_v
 	float lad_v= K2_LAD_V + K1_LAD_V*v_abs_;
 	//find reference index for curvature
-	int i=indexOfDistanceFront(state_.current_arrayposition, lad_v);
+	int i=indexOfRadiusFront(state_.current_arrayposition, lad_v);
 	if(i>=n_poses_path_) i=n_poses_path_-1;
 	pure_pursuit_gui_msg_.data[4]=i;
 	float v_limit=sqrt(MAX_LATERAL_ACCELERATION*curveRadius(i));		//Physik stimmt?
@@ -318,12 +316,7 @@ void PurePursuit::readPathFromTxt(std::string inFileName)
 	n_poses_path_ = i;
 	float l_dumb=0;
 	i=n_poses_path_-1;
-	while(l_dumb<SLOW_DOWN_DISTANCE)
-		{
-		l_dumb+=distanceIJ(i-1,i);
-		i--;
-		}
-	slow_down_index_=i;
+	slow_down_index_=indexOfDistanceBack(i,SLOW_DOWN_DISTANCE);
 }
 
 
@@ -405,7 +398,7 @@ int PurePursuit::indexOfDistanceFront(int i, float d)
 		if(j+1>n_poses_path_-1){std::cout<<"PURE PURSUIT: LAUFZEITFEHLER::indexOfDistanceFront"<<std::endl;}
 		j ++;
 	}
-	return j+1;
+	return j;
 }
 
 int PurePursuit::indexOfDistanceBack(int i, float d)
@@ -422,6 +415,28 @@ int PurePursuit::indexOfDistanceBack(int i, float d)
 	}
 	return j;
 }
+
+int PurePursuit::indexOfRadiusFront(int i_start, float d)
+{	
+	int j=i_start;
+	float d_old=100;
+	float d_new; 
+	geometry_msgs::Point my_point=path_.poses[i_start].pose.position;
+	geometry_msgs::Point search_point;
+	int i_end=indexOfDistanceFront(i_start, 30);	//30 soll viel grösser sein als möglicher suchradius..
+	for(int i=i_start; i<i_end ; i++ )
+		{
+		search_point=path_.poses[i].pose.position;
+		d_new=fabs(d-sqrt(pow((my_point.x-search_point.x),2)+pow((my_point.y-search_point.y),2)));
+		if(d_new<d_old)
+			{
+			d_old=d_new;
+			j=i;
+			}
+		}
+	return j;
+}
+
 // Method which returns the current state.
 arc_msgs::State PurePursuit::getState()
 {

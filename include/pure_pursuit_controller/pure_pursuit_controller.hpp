@@ -59,6 +59,7 @@ public:
 	//Returns index at certain distance from input index
 	int indexOfDistanceFront(int i, float d);
 	int indexOfDistanceBack(int i, float d);
+	int indexOfRadiusFront(int i,float d);
 
 private:
 	// 1. ROS setup.
