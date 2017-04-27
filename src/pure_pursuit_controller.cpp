@@ -92,7 +92,6 @@ PurePursuit::PurePursuit(ros::NodeHandle* n, std::string PATH_NAME )
 	gui_stop_sub_=n_->subscribe(SHUTDOWN_TOPIC, QUEUE_LENGTH ,&PurePursuit::guiStopCallback,this);
 	// Construction succesful.
 	std::cout << std::endl << "PURE PURSUIT: Consturctor with path lenght: " <<n_poses_path_<< " and slow_down_index: "<<slow_down_index_<<std::endl;
-	
 /*
 fir (int i=0; i<n_poses_path_;i++) std::cout<<"Radius at "<<i<<" is "<<curveRadius(i)<<std::endl;
 */
@@ -123,19 +122,19 @@ void PurePursuit::stateCallback(const arc_msgs::State::ConstPtr& incoming_state)
 	// Publish the calculated control commands.
 	this -> publishU();
 	// Display success.
-	// std::cout<<"0:Abstand zu Start Pfad "<<pure_pursuit_gui_msg_.data[0]<<std::endl;
-	// std::cout<<"1:Abstand zu Ende Pfad "<<pure_pursuit_gui_msg_.data[1]<<std::endl;
-	// std::cout<<"2:Referenzindex für steuerung "<<pure_pursuit_gui_msg_.data[2]<<std::endl;
-	// std::cout<<"3:Solllenkwinkel "<<pure_pursuit_gui_msg_.data[3]<<std::endl;
-	// std::cout<<"4:Referenzindex für radius geschwindigkeit "<<pure_pursuit_gui_msg_.data[4]<<std::endl;
-	// std::cout<<"5:Radius Pfad "<<pure_pursuit_gui_msg_.data[5]<<std::endl;
-	// std::cout<<"6:Physikalische geschw. Grenze "<<pure_pursuit_gui_msg_.data[6]<<std::endl;
-	// std::cout<<"7:Bremsweg "<<pure_pursuit_gui_msg_.data[7]<<std::endl;
-	// std::cout<<"8:Upper bound given by teach velocity "<<pure_pursuit_gui_msg_.data[8]<<std::endl;
-	// std::cout<<"9:Sollgeschwindigkeit final "<<pure_pursuit_gui_msg_.data[9]<<std::endl;
-	// std::cout<<"10: "<<pure_pursuit_gui_msg_.data[10]<<std::endl;
-	// std::cout<<std::endl;
-	// std::cout<<"SENT COMMAND"<<std::endl;
+	 std::cout<<"0:Abstand zu Start Pfad "<<pure_pursuit_gui_msg_.data[0]<<std::endl;
+	 std::cout<<"1:Abstand zu Ende Pfad "<<pure_pursuit_gui_msg_.data[1]<<std::endl;
+	 std::cout<<"2:Referenzindex für steuerung "<<pure_pursuit_gui_msg_.data[2]<<std::endl;
+	 std::cout<<"3:Solllenkwinkel "<<pure_pursuit_gui_msg_.data[3]<<std::endl;
+	 std::cout<<"4:Referenzindex für radius geschwindigkeit "<<pure_pursuit_gui_msg_.data[4]<<std::endl;
+	 std::cout<<"5:Radius Pfad "<<pure_pursuit_gui_msg_.data[5]<<std::endl;
+	 std::cout<<"6:Physikalische geschw. Grenze "<<pure_pursuit_gui_msg_.data[6]<<std::endl;
+	 std::cout<<"7:Bremsweg "<<pure_pursuit_gui_msg_.data[7]<<std::endl;
+	 std::cout<<"8:Upper bound given by teach velocity "<<pure_pursuit_gui_msg_.data[8]<<std::endl;
+	 std::cout<<"9:Sollgeschwindigkeit final "<<pure_pursuit_gui_msg_.data[9]<<std::endl;
+	 std::cout<<"10: "<<pure_pursuit_gui_msg_.data[10]<<std::endl;
+	 std::cout<<std::endl;
+	 std::cout<<"SENT COMMAND"<<std::endl;
 }
 
 void PurePursuit::guiStopCallback(const std_msgs::Bool::ConstPtr& msg)
@@ -147,6 +146,7 @@ void PurePursuit::guiStopCallback(const std_msgs::Bool::ConstPtr& msg)
 void PurePursuit::obstacleCallback(const std_msgs::Float64::ConstPtr& msg)
 {
 	obstacle_distance_=msg->data;
+	std::cout<<"Obstacle "<<obstacle_distance_<<std::endl;
 }
 // Calculate the desired steering angle using the pure pursuit formula.
 void PurePursuit::calculateSteer()
