@@ -167,19 +167,21 @@ void PurePursuit::calculateSteer()
 	float alpha=0;
 	if(i>=n_poses_path_-1) i=n_poses_path_-1;
 	float l=distanceIJ(state_.current_arrayposition,i);
+std::cout<<" lad want "<<lad<<" l= "<<l<<std::endl;
 	pure_pursuit_gui_msg_.data[2]=i;
 	geometry_msgs::Point referenz_local=arc_tools::globalToLocal(path_.poses[i].pose.position, state_);
 	float dy = referenz_local.y;
 	float dx = referenz_local.x;
-	//std::cout<<"x-local "<<dx<<std::endl<<"y-local "<<dy<<std::endl;
+std::cout<<"x-local "<<dx<<std::endl<<"y-local "<<dy<<std::endl;
 	alpha = atan2(dy,dx);
 
 	float new_steer= atan2(2*DISTANCE_WHEEL_AXIS*sin(alpha),l);
 	float old_steer = u_.steering_angle;
 	float delta_steer=STEER_PER_SECOND/PURE_PURSUIT_RATE;
-	u_.steering_angle= std::min(old_steer+delta_steer,new_steer);
-	u_.steering_angle= std::max(old_steer-delta_steer,u_.steering_angle);
-std::cout<<"Old steer: "<<old_steer<<" Delta steer: "<<delta_steer<<" New wanted steer "<<new_steer<<" Actual bounded final steer: "<<u_.steering_angle<<std::endl;
+	u_.steering_angle=new_steer;
+//	u_.steering_angle= std::min(old_steer+delta_steer,new_steer);
+//	u_.steering_angle= std::max(old_steer-delta_steer,u_.steering_angle);
+//std::cout<<"Old steer: "<<old_steer<<" Delta steer: "<<delta_steer<<" New wanted steer "<<new_steer<<" Actual bounded final steer: "<<u_.steering_angle<<std::endl;
 	pure_pursuit_gui_msg_.data[3]=u_.steering_angle;
 }
 // Method which calculates the ideal speed, using the self-derived empirical formula.
@@ -192,7 +194,7 @@ void PurePursuit::calculateVel()
 	int i=indexOfRadiusFront(state_.current_arrayposition, lad_v);
 	if(i>=n_poses_path_) i=n_poses_path_-1;
 	pure_pursuit_gui_msg_.data[4]=i;
-	float v_limit=sqrt(MAX_LATERAL_ACCELERATION*curveRadius(i));		//Physik stimmt?
+	float v_limit=20;//sqrt(MAX_LATERAL_ACCELERATION*curveRadius(i));		//Physik stimmt?
 	pure_pursuit_gui_msg_.data[6]=v_limit;
     //Upper buonds
 	float v_bounded=v_limit;
@@ -205,7 +207,7 @@ void PurePursuit::calculateVel()
 	//Static penalisation
 	float C=FOS_VELOCITY;
 	//lateral error, half for 1m error
-	C=C/(1+abs(tracking_error_));
+	//C=C/(1+abs(tracking_error_));
 /*	//Obstacle distance
 	
 	// float brake_dist=pow(v_abs_*3.6/10,2)/2;	//Physikalisch Sinn??
@@ -411,6 +413,7 @@ int PurePursuit::indexOfDistanceFront(int i, float d)
 		if(j+1>n_poses_path_-1){std::cout<<"PURE PURSUIT: LAUFZEITFEHLER::indexOfDistanceFront"<<std::endl;}
 		j ++;
 	}
+	std::cout<<"lad real "<<l<<std::endl;
 	return j;
 }
 
@@ -447,6 +450,7 @@ int PurePursuit::indexOfRadiusFront(int i_start, float d)
 			j=i;
 			}
 		}
+	std::cout<<"lad real "<<d_old<<std::endl;
 	return j;
 }
 
