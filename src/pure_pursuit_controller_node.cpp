@@ -20,6 +20,6 @@ int main(int argc, char **argv)
 	r.sleep();
 	}
 	// Start the callback functions.
-	ros::spin();
+	ros::spin();/**/
 	return 0;
 	}

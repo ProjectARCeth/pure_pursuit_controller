@@ -60,6 +60,7 @@ public:
 	int indexOfDistanceFront(int i, float d);
 	int indexOfDistanceBack(int i, float d);
 	int indexOfRadiusFront(int i,float d);
+	float linearInterpolation(float a_lower, float a_upper ,float b_lower, float b_upper, float b_middle);
 
 private:
 	// 1. ROS setup.

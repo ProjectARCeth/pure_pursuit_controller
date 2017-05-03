@@ -69,7 +69,7 @@ PurePursuit::PurePursuit(ros::NodeHandle* n, std::string PATH_NAME )
 	n->getParam("/topic/STATE",STATE_TOPIC);
 	n->getParam("/topic/OBSTACLE_DISTANCE",OBSTACLE_DISTANCE_TOPIC);
 	n->getParam("/topic/SHUTDOWN",SHUTDOWN_TOPIC);
-	PATH_NAME_EDITED = PATH_NAME + "_teach.txt";  //BSP:rosrun pure_pursuit_controller regler_node /home/moritz/.ros/Paths/test
+	PATH_NAME_EDITED = PATH_NAME + "_teach.txt";  //"/home/moritz/.ros/Paths/current_path.txt";BSP:rosrun pure_pursuit_controller regler_node /home/moritz/.ros/Paths/test
 
 	// 1. Save the arguments to member variables.
 	// Set the nodehandle.
@@ -98,7 +98,28 @@ PurePursuit::PurePursuit(ros::NodeHandle* n, std::string PATH_NAME )
 	gui_stop_sub_=n_->subscribe(SHUTDOWN_TOPIC, QUEUE_LENGTH ,&PurePursuit::guiStopCallback,this);
 	// Construction succesful.
 	std::cout << std::endl << "PURE PURSUIT: Consturctor with path lenght: " <<n_poses_path_<< " and slow_down_index: "<<slow_down_index_<<std::endl;
-//std::cout<<"index with old "<<indexOfDistanceFront(800,20)<<" index with new "<<indexOfRadiusFront(800,20)<<std::endl;
+
+//TEST
+/*
+state_.current_arrayposition=1;
+int now=state_.current_arrayposition;
+float lad=1.2;
+int i=indexOfDistanceFront(now,lad);
+float dist_short=distanceIJ(now, i-1);
+float dist_long=distanceIJ(now, i);
+geometry_msgs::Point point_front=path_.poses[i].pose.position;
+geometry_msgs::Point point_back=path_.poses[i-1].pose.position;
+geometry_msgs::Point point_interp;
+//Interpolate x
+point_interp.x=linearInterpolation(point_back.x,point_front.x,dist_short,dist_long,lad);
+//Interpolate y
+point_interp.y=linearInterpolation(point_back.y,point_front.y,dist_short,dist_long,lad);
+//Interpolate z
+point_interp.z=linearInterpolation(point_back.z,point_front.z,dist_short,dist_long,lad);
+
+std::cout<<"indexfront= "<<i<<" distanceshort "<<dist_short<<" distancelong "<<dist_long<<std::endl<<" Point front" <<point_front<<" point back "<<point_back<<" point interp "<<point_interp<<std::endl;
+*/
+//END TEST
 }	
 // Default destructor.
 PurePursuit::~PurePursuit(){}
@@ -163,26 +184,49 @@ void PurePursuit::calculateSteer()
 	float lad = K2_LAD_S + K1_LAD_S*v_abs_;
 	lad=std::max(lad,LOWERBOUND_LAD_S);
 	lad=std::min(lad,UPPERBOUND_LAD_S);
-	int i=indexOfRadiusFront(state_.current_arrayposition,lad);
-	float alpha=0;
-	if(i>=n_poses_path_-1) i=n_poses_path_-1;
-	float l=distanceIJ(state_.current_arrayposition,i);
-std::cout<<" lad want "<<lad<<" l= "<<l<<std::endl;
-	pure_pursuit_gui_msg_.data[2]=i;
-	geometry_msgs::Point referenz_local=arc_tools::globalToLocal(path_.poses[i].pose.position, state_);
-	float dy = referenz_local.y;
-	float dx = referenz_local.x;
-std::cout<<"x-local "<<dx<<std::endl<<"y-local "<<dy<<std::endl;
-	alpha = atan2(dy,dx);
-
-	float new_steer= atan2(2*DISTANCE_WHEEL_AXIS*sin(alpha),l);
-	float old_steer = u_.steering_angle;
-	float delta_steer=STEER_PER_SECOND/PURE_PURSUIT_RATE;
-	u_.steering_angle=new_steer;
-//	u_.steering_angle= std::min(old_steer+delta_steer,new_steer);
-//	u_.steering_angle= std::max(old_steer-delta_steer,u_.steering_angle);
-//std::cout<<"Old steer: "<<old_steer<<" Delta steer: "<<delta_steer<<" New wanted steer "<<new_steer<<" Actual bounded final steer: "<<u_.steering_angle<<std::endl;
-	pure_pursuit_gui_msg_.data[3]=u_.steering_angle;
+	//Eliminate tracking error
+	int i=indexOfDistanceFront(state_.current_arrayposition,lad);
+	//Approaching end of path set steer to 0
+	if(i>=n_poses_path_-1)
+	{
+		i=n_poses_path_-1;
+		lad=distanceIJ(state_.current_arrayposition,i-1);
+		pure_pursuit_gui_msg_.data[2]=i;
+		u_.steering_angle=0;
+		pure_pursuit_gui_msg_.data[3]=u_.steering_angle;
+		std::cout<<"PurePursuit: End reached, steer is 0"<<std::endl;
+	}
+	else
+	{
+		pure_pursuit_gui_msg_.data[2]=i;
+		//Interpolate 
+		float dist_short=distanceIJ(state_.current_arrayposition, i-1);
+		float dist_long=distanceIJ(state_.current_arrayposition, i);
+		geometry_msgs::Point point_front=path_.poses[i].pose.position;
+		geometry_msgs::Point point_back=path_.poses[i-1].pose.position;
+		geometry_msgs::Point point_interp;
+		//Interpolate x
+		point_interp.x=linearInterpolation(point_back.x,point_front.x,dist_short,dist_long,lad);
+		//Interpolate y
+		point_interp.y=linearInterpolation(point_back.y,point_front.y,dist_short,dist_long,lad);
+		//Interpolate z
+		point_interp.z=linearInterpolation(point_back.z,point_front.z,dist_short,dist_long,lad);
+	
+		//Project on my plane
+		geometry_msgs::Point referenz_local=arc_tools::globalToLocal(point_interp, state_);
+		float dy = referenz_local.y;
+		float dx = referenz_local.x;
+std::cout<<"X-LOCAL "<<dx<<std::endl<<"Y-LOCAL "<<dy<<std::endl;
+	
+		//PurePursuit formula	
+		float alpha = atan2(dy,dx);
+		float new_steer= atan2(2*DISTANCE_WHEEL_AXIS*sin(alpha),lad);
+	
+		//Save steer.
+		float old_steer = u_.steering_angle;
+		u_.steering_angle=new_steer;
+		pure_pursuit_gui_msg_.data[3]=u_.steering_angle;
+	}
 }
 // Method which calculates the ideal speed, using the self-derived empirical formula.
 void PurePursuit::calculateVel()
@@ -274,7 +318,6 @@ void PurePursuit::publishU()
 	gui_pub_.publish(pure_pursuit_gui_msg_);
 }
 
-// HELPER METHODS.
 // Method which reads in the text file and saves the path to the path_variable.
 void PurePursuit::readPathFromTxt(std::string inFileName)
 {
@@ -466,4 +509,13 @@ ackermann_msgs::AckermannDrive PurePursuit::getU()
 	return u1;
 }
 
-
+float PurePursuit::linearInterpolation(float a_lower, float a_upper ,float b_lower, float b_upper, float b_middle)
+{	
+	if(b_upper == b_lower) 
+	{
+		std::cout<<"Falsch interpoliert \n";
+		return a_lower;
+	}
+	float a_middle =  a_lower + ( b_middle - b_lower ) * ( a_upper - a_lower )/( b_upper - b_lower );
+	return a_middle;
+}
