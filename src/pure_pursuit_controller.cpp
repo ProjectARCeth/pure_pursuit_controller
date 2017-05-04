@@ -174,6 +174,8 @@ void PurePursuit::obstacleCallback(const std_msgs::Float64::ConstPtr& msg)
 	obstacle_distance_=msg->data;
 	std::cout<<"Obstacle "<<obstacle_distance_<<std::endl;
 }
+
+
 // Calculate the desired steering angle using the pure pursuit formula.
 void PurePursuit::calculateSteer()
 {
@@ -189,16 +191,15 @@ void PurePursuit::calculateSteer()
 	//Approaching end of path set steer to 0
 	if(i>=n_poses_path_-1)
 	{
-		i=n_poses_path_-1;
-		lad=distanceIJ(state_.current_arrayposition,i-1);
-		pure_pursuit_gui_msg_.data[2]=i;
 		u_.steering_angle=0;
-		pure_pursuit_gui_msg_.data[3]=u_.steering_angle;
+		pure_pursuit_gui_msg_.data[2]=0;
+		pure_pursuit_gui_msg_.data[3]=0;
+//		pure_pursuit_gui_msg_.data[3]=u_.steering_angle;
 		std::cout<<"PurePursuit: End reached, steer is 0"<<std::endl;
 	}
 	else
 	{
-		pure_pursuit_gui_msg_.data[2]=i;
+//		pure_pursuit_gui_msg_.data[2]=i;
 		//Interpolate 
 		float dist_short=distanceIJ(state_.current_arrayposition, i-1);
 		float dist_long=distanceIJ(state_.current_arrayposition, i);
@@ -216,7 +217,9 @@ void PurePursuit::calculateSteer()
 		geometry_msgs::Point referenz_local=arc_tools::globalToLocal(point_interp, state_);
 		float dy = referenz_local.y;
 		float dx = referenz_local.x;
-std::cout<<"X-LOCAL "<<dx<<std::endl<<"Y-LOCAL "<<dy<<std::endl;
+		pure_pursuit_gui_msg_.data[2]=dx;
+		pure_pursuit_gui_msg_.data[3]=dy;
+//std::cout<<"X-LOCAL "<<dx<<std::endl<<"Y-LOCAL "<<dy<<std::endl;
 	
 		//PurePursuit formula	
 		float alpha = atan2(dy,dx);
@@ -225,7 +228,7 @@ std::cout<<"X-LOCAL "<<dx<<std::endl<<"Y-LOCAL "<<dy<<std::endl;
 		//Save steer.
 		float old_steer = u_.steering_angle;
 		u_.steering_angle=new_steer;
-		pure_pursuit_gui_msg_.data[3]=u_.steering_angle;
+		pure_pursuit_gui_msg_.data[4]=u_.steering_angle;
 	}
 }
 // Method which calculates the ideal speed, using the self-derived empirical formula.
@@ -237,15 +240,14 @@ void PurePursuit::calculateVel()
 	//find reference index for curvature
 	int i=indexOfRadiusFront(state_.current_arrayposition, lad_v);
 	if(i>=n_poses_path_) i=n_poses_path_-1;
-	pure_pursuit_gui_msg_.data[4]=i;
-	float v_limit=20;//sqrt(MAX_LATERAL_ACCELERATION*curveRadius(i));		//Physik stimmt?
-	pure_pursuit_gui_msg_.data[6]=v_limit;
+//	mit=20;//sqrt(MAX_LATERAL_ACCELERATION*curveRadius(i));		//Physik stimmt?
+	pure_pursuit_gui_msg_.data[5]=v_limit;
     //Upper buonds
 	float v_bounded=v_limit;
 	//MAX_ABSOLUTE_VELOCITY
 	v_bounded=std::min(v_bounded,MAX_ABSOLUTE_VELOCITY);
 	//TEACH_VELOCITY
-	pure_pursuit_gui_msg_.data[8]=teach_vel_[state_.current_arrayposition-1]+V_FREEDOM;
+	pure_pursuit_gui_msg_.data[6]=teach_vel_[state_.current_arrayposition-1]+V_FREEDOM;
 	v_bounded=std::min(v_bounded,teach_vel_[state_.current_arrayposition-1]+V_FREEDOM);
     //Penalisations
 	//Static penalisation
@@ -308,7 +310,7 @@ void PurePursuit::calculateVel()
 	float v_ref = v_bounded * C;
     //Speichern auf Stellgrössen
 	u_.speed=v_ref;
-	pure_pursuit_gui_msg_.data[9]=u_.speed;
+	pure_pursuit_gui_msg_.data[7]=u_.speed;
 	u_.acceleration=v_abs_;
 }
 // Method which publishes the calculated commands onto the topic to the system engineers interface node.
@@ -440,7 +442,7 @@ float PurePursuit::curveRadius(int j)
 		}
 	}
 	float r=r_sum/count;
-	pure_pursuit_gui_msg_.data[5]=r;
+//	pure_pursuit_gui_msg_.data[5]=r;
 	return r;
 }
 
@@ -456,7 +458,6 @@ int PurePursuit::indexOfDistanceFront(int i, float d)
 		if(j+1>n_poses_path_-1){std::cout<<"PURE PURSUIT: LAUFZEITFEHLER::indexOfDistanceFront"<<std::endl;}
 		j ++;
 	}
-	std::cout<<"lad real "<<l<<std::endl;
 	return j;
 }
 
@@ -493,7 +494,6 @@ int PurePursuit::indexOfRadiusFront(int i_start, float d)
 			j=i;
 			}
 		}
-	std::cout<<"lad real "<<d_old<<std::endl;
 	return j;
 }
 
