@@ -149,17 +149,13 @@ void PurePursuit::stateCallback(const arc_msgs::State::ConstPtr& incoming_state)
 	// Display success.
 /*	 std::cout<<"0:Abstand zu Start Pfad "<<pure_pursuit_gui_msg_.data[0]<<std::endl;
 	 std::cout<<"1:Abstand zu Ende Pfad "<<pure_pursuit_gui_msg_.data[1]<<std::endl;
-	 std::cout<<"2:Referenzindex für steuerung "<<pure_pursuit_gui_msg_.data[2]<<std::endl;
-	 std::cout<<"3:Solllenkwinkel "<<pure_pursuit_gui_msg_.data[3]<<std::endl;
-	 std::cout<<"4:Referenzindex für radius geschwindigkeit "<<pure_pursuit_gui_msg_.data[4]<<std::endl;
-	 std::cout<<"5:Radius Pfad "<<pure_pursuit_gui_msg_.data[5]<<std::endl;
-	 std::cout<<"6:Physikalische geschw. Grenze "<<pure_pursuit_gui_msg_.data[6]<<std::endl;
-	 std::cout<<"7:Bremsweg "<<pure_pursuit_gui_msg_.data[7]<<std::endl;
-	 std::cout<<"8:Upper bound given by teach velocity "<<pure_pursuit_gui_msg_.data[8]<<std::endl;
-	 std::cout<<"9:Sollgeschwindigkeit final "<<pure_pursuit_gui_msg_.data[9]<<std::endl;
-	 std::cout<<"10: "<<pure_pursuit_gui_msg_.data[10]<<std::endl;
+	 std::cout<<"2:X-local für steuerung "<<pure_pursuit_gui_msg_.data[2]<<std::endl;
+	 std::cout<<"3:Y-local für steuerung"<<pure_pursuit_gui_msg_.data[3]<<std::endl;
+	 std::cout<<"4:Lenkwinkel "<<pure_pursuit_gui_msg_.data[4]<<std::endl;
+	 std::cout<<"5:Physikalische grenze v_ref "<<pure_pursuit_gui_msg_.data[5]<<std::endl;
+	 std::cout<<"6:Teach_geschw+V_Freedom"<<pure_pursuit_gui_msg_.data[6]<<std::endl;
+	 std::cout<<"7:Referenzgeschw final "<<pure_pursuit_gui_msg_.data[7]<<std::endl;
 	 std::cout<<std::endl;
-	 std::cout<<"SENT COMMAND"<<std::endl;
 */
 }
 
@@ -240,7 +236,7 @@ void PurePursuit::calculateVel()
 	//find reference index for curvature
 	int i=indexOfRadiusFront(state_.current_arrayposition, lad_v);
 	if(i>=n_poses_path_) i=n_poses_path_-1;
-//	mit=20;//sqrt(MAX_LATERAL_ACCELERATION*curveRadius(i));		//Physik stimmt?
+	float v_limit=20;//sqrt(MAX_LATERAL_ACCELERATION*curveRadius(i));		//Physik stimmt?
 	pure_pursuit_gui_msg_.data[5]=v_limit;
     //Upper buonds
 	float v_bounded=v_limit;
