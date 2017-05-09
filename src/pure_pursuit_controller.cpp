@@ -216,7 +216,8 @@ void PurePursuit::calculateSteer()
 		pure_pursuit_gui_msg_.data[2]=dx;
 		pure_pursuit_gui_msg_.data[3]=dy;
 //std::cout<<"X-LOCAL "<<dx<<std::endl<<"Y-LOCAL "<<dy<<std::endl;
-	
+
+//std::cout<<"lad "<<lad<<std::endl<<"state \n"<<state_.pose.pose.position<<std::endl<<"ref point \n"<<point_interp<<std::endl<<"local \n"<<referenz_local<<std::endl;
 		//PurePursuit formula	
 		float alpha = atan2(dy,dx);
 		float new_steer= atan2(2*DISTANCE_WHEEL_AXIS*sin(alpha),lad);
@@ -308,6 +309,7 @@ void PurePursuit::calculateVel()
 	u_.speed=v_ref;
 	pure_pursuit_gui_msg_.data[7]=u_.speed;
 	u_.acceleration=v_abs_;
+std::cout<<"v_end "<<v_ref<<std::endl;
 }
 // Method which publishes the calculated commands onto the topic to the system engineers interface node.
 void PurePursuit::publishU()
@@ -427,7 +429,10 @@ float PurePursuit::curveRadius(int j)
 			{std::cout<<"PURE PURSUIT: LAUFZEITFEHLER curve radius"<<std::endl;}
 		float zaehler =i_back.dot(-i_front);
 		float nenner = (i_back.norm()*i_front.norm());
-		float gamma=acos(zaehler/nenner);//winkel zwischen Vektoren
+		float argument=zaehler/nenner;
+		if (argument>1) argument=1;
+		if (argument<-1) argument=-1;
+		float gamma=acos(argument);//winkel zwischen Vektoren
 		if(sin(gamma)==0) 
 		{
 			r_sum+=9999999;		//irgendeine grosse Zahl um nicht nan zu erzeugen in nächster zeile
