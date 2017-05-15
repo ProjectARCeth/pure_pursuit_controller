@@ -100,6 +100,8 @@ private:
 	arc_tools::Clock BigBen_;
 	//
 	std_msgs::Float32MultiArray pure_pursuit_gui_msg_;
+	//Loop time
+	ros::Time loop_time_;
 };
 
 
