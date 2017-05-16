@@ -440,13 +440,13 @@ float PurePursuit::curveRadius(int j)
 		if (argument>1) argument=1;
 		if (argument<-1) argument=-1;
 		float gamma=acos(argument);//winkel zwischen Vektoren
-		if(sin(gamma)==0) 
+		if(fabs(sin(gamma))<0.001) 
 		{
 			r_sum+=9999999;		//irgendeine grosse Zahl um nicht nan zu erzeugen in nächster zeile
 		}
 		else
 		{
-			r_sum+=back_front.norm()/(2*sin(gamma));	//Gleichung umkreis
+			r_sum+=back_front.norm()/(2*fabs(sin(gamma)));	//Gleichung umkreis
 		}
 	}
 	float r=r_sum/count;
