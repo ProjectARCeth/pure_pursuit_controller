@@ -237,7 +237,7 @@ void PurePursuit::calculateVel()
 	//find reference index for curvature
 	int i=indexOfRadiusFront(state_.current_arrayposition, lad_v);
 	if(i>=n_poses_path_) i=n_poses_path_-1;
-	float v_limit=sqrt(MAX_LATERAL_ACCELERATION*curveRadius(i));		//Physik stimmt?
+	float v_limit=20; //sqrt(MAX_LATERAL_ACCELERATION*curveRadius(i));		//Physik stimmt?
 	pure_pursuit_gui_msg_.data[5]=v_limit;
     //Upper buonds
 	float v_bounded=v_limit;
@@ -250,14 +250,14 @@ void PurePursuit::calculateVel()
 	//Static penalisation
 	float C=FOS_VELOCITY;
 	//penalise lateral error, half velocity for 2m error
-	C=C/(1+(fabs(tracking_error_)/2));
+//	C=C/(1+(fabs(tracking_error_)/2));
 	//penalise orientation difference to teach part, half at 45deg 
 	geometry_msgs::Quaternion quat_teach=path_.poses[state_.current_arrayposition].pose.orientation;
 	Eigen::Vector3d euler_teach=arc_tools::YPRFromQuaternion(quat_teach);
 	Eigen::Vector3d euler_repeat=arc_tools::YPRFromQuaternion(state_.pose.pose.orientation);
 	float delta_yaw=fabs(euler_teach(0)-euler_repeat(0));
 	float delta_norm=delta_yaw/(M_PI/2);
-	C=C/(1+delta_norm*2);
+//	C=C/(1+delta_norm*2);
 /*	//Obstacle distance
 	
 	// float brake_dist=pow(v_abs_*3.6/10,2)/2;	//Physikalisch Sinn??
