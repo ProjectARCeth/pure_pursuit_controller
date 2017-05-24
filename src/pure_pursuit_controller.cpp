@@ -220,7 +220,7 @@ void PurePursuit::calculateSteer()
 //std::cout<<"lad "<<lad<<std::endl<<"state \n"<<state_.pose.pose.position<<std::endl<<"ref point \n"<<point_interp<<std::endl<<"local \n"<<referenz_local<<std::endl;
 		//PurePursuit formula	
 		float alpha = atan2(dy,dx);
-		float new_steer= atan2(2*DISTANCE_WHEEL_AXIS*sin(alpha),lad);
+		float new_steer= 0.8*atan2(2*DISTANCE_WHEEL_AXIS*sin(alpha),lad);
 	
 		//Save steer.
 		float old_steer = u_.steering_angle;
@@ -256,8 +256,13 @@ void PurePursuit::calculateVel()
 	Eigen::Vector3d euler_teach=arc_tools::YPRFromQuaternion(quat_teach);
 	Eigen::Vector3d euler_repeat=arc_tools::YPRFromQuaternion(state_.pose.pose.orientation);
 	float delta_yaw=fabs(euler_teach(0)-euler_repeat(0));
+    if(delta_yaw>M_PI)
+    	delta_yaw=fabs(delta_yaw-2*M_PI);
+    if(delta_yaw<8*M_PI/180.0||delta_yaw>-8*M_PI/180.0)
+    	delta_yaw=0;
+	std::cout << "Derivation DELTA " << delta_yaw/(M_PI)*180 << std::endl;
 	float delta_norm=delta_yaw/(M_PI/2);
-//	C=C/(1+delta_norm*2);
+	C=C/(1+delta_norm*2);
 /*	//Obstacle distance
 	
 	// float brake_dist=pow(v_abs_*3.6/10,2)/2;	//Physikalisch Sinn??
@@ -307,9 +312,16 @@ void PurePursuit::calculateVel()
 
 	//Slow down beacuse of obstacle
 	if(obstacle_distance_<OBSTACLE_SLOW_DOWN_DISTANCE) std::cout<<OBSTACLE_SLOW_DOWN_DISTANCE<<" PURE PURSUIT; Slow down for obstacle"<<std::endl;
+	if(obstacle_distance_<OBSTACLE_SLOW_DOWN_DISTANCE && obstacle_distance_>=OBSTACLE_PUFFER_DISTANCE) {
+		C=0.4;
+	}
+	if(obstacle_distance_<OBSTACLE_PUFFER_DISTANCE) {
+		C=0.0;
+	}
+/*		
 	obstacle_distance_=std::max(obstacle_distance_,OBSTACLE_PUFFER_DISTANCE);
 	obstacle_distance_=std::min(obstacle_distance_,OBSTACLE_SLOW_DOWN_DISTANCE);
-	C=C * (obstacle_distance_ - OBSTACLE_PUFFER_DISTANCE) / (OBSTACLE_SLOW_DOWN_DISTANCE - OBSTACLE_PUFFER_DISTANCE);
+	C=C * (obstacle_distance_ - OBSTACLE_PUFFER_DISTANCE) / (OBSTACLE_SLOW_DOWN_DISTANCE - OBSTACLE_PUFFER_DISTANCE);*/
 
 	float v_ref = v_bounded * C;
     //Speichern auf Stellgrössen
